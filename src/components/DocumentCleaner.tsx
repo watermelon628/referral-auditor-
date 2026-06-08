@@ -73,7 +73,16 @@ export function DocumentCleaner({ patient, onUpdatePatient }: DocumentCleanerPro
       });
 
       if (!response.ok) {
-        throw new Error('Server responded with an error during clinical cleaning.');
+        let errorMsg = 'Server responded with an error during clinical cleaning.';
+        try {
+          const errData = await response.json();
+          if (errData && errData.error) {
+            errorMsg = `Clinical cleaning error: ${errData.error}`;
+          }
+        } catch (e) {
+          // Fallback if not JSON or parsing fails
+        }
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
