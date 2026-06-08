@@ -12,19 +12,24 @@ import { GoogleGenAI, Type } from '@google/genai';
 dotenv.config();
 
 // Ensure the Gemini API key is configured
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.API_KEY || process.env.VITE_API_KEY;
 if (!apiKey) {
-  console.warn("Warning: GEMINI_API_KEY environment variable is not set. API calls will fail.");
+  console.warn("Warning: GEMINI_API_KEY or other fallback key environment variable has not been set. API calls will fail.");
 }
 
 const ai = new GoogleGenAI({
-  apiKey: apiKey,
+  apiKey: apiKey || '',
   httpOptions: {
     headers: {
       'User-Agent': 'aistudio-build',
     },
   },
 });
+
+const app = express();
+// Increase payload size limit to support file/image uploads encoded in base64
+app.use(express.json({ limit: '30mb' }));
+app.use(express.urlencoded({ limit: '30mb', extended: true }));
 
 // Resilient fallback rule-based demographics extractor when Gemini is over-quota
 function parseDemographicsFallback(manualNotes: string, cleanedMarkdown: string): any {
@@ -263,15 +268,7 @@ ${missingGapsList.join('\n\n')}
   return { summary, missingInfoAnalysis };
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
-
-  // Increase payload size limit to support file/image uploads encoded in base64
-  app.use(express.json({ limit: '30mb' }));
-  app.use(express.urlencoded({ limit: '30mb', extended: true }));
-
-  // --- API Routes ---
+// --- API Routes ---
 
   // API 1: Data Cleaner - Convert file into clean word-for-word Markdown text
   app.post('/api/clean-doc', async (req, res) => {
@@ -555,22 +552,28 @@ Produce a JSON containing:
   // --- Vite & Production static servers ---
 
   if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
+    const startDev = async () => {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+      app.listen(3000, '0.0.0.0', () => {
+        console.log('Development server running on http://localhost:3000');
+      });
+    };
+    startDev();
+  } else if (!process.env.VERCEL) {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
+
+    const PORT = parseInt(process.env.PORT || '3000', 10);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Standalone production server running on port ${PORT}`);
+    });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
-
-startServer();
+export default app;
