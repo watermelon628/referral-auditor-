@@ -11,7 +11,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 dotenv.config();
 
 // Ensure the Gemini API key is configured
-const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.API_KEY || process.env.VITE_API_KEY;
+const apiKey = process.env.FinaL_API_Key || process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.API_KEY || process.env.VITE_API_KEY;
 if (!apiKey) {
   console.warn("Warning: GEMINI_API_KEY or other fallback key environment variable has not been set. API calls will fail.");
 }
