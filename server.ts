@@ -5,7 +5,6 @@
 
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
 
@@ -587,6 +586,7 @@ Produce a JSON containing:
 
   if (process.env.NODE_ENV !== 'production') {
     const startDev = async () => {
+      const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: 'spa',
