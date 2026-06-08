@@ -279,11 +279,11 @@ ${missingGapsList.join('\n\n')}
         return res.status(400).json({ error: 'Missing document content' });
       }
 
-      console.log(`Cleaning document: ${fileName} (${fileType})`);
+      console.log(`Cleaning document: ${fileName || 'Unnamed'} (${fileType || 'Unspecified'})`);
 
       let response;
-      const isImage = fileType.startsWith('image/');
-      const isPdf = fileType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf');
+      const isImage = (fileType && typeof fileType === 'string' && fileType.startsWith('image/')) || false;
+      const isPdf = fileType === 'application/pdf' || (fileName && typeof fileName === 'string' && fileName.toLowerCase().endsWith('.pdf')) || false;
 
       if (isImage || isPdf) {
         // Base64 image or PDF document
@@ -299,7 +299,7 @@ ${missingGapsList.join('\n\n')}
         };
 
         response = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
+          model: 'gemini-2.5-flash',
           contents: { parts: [imagePart, textPart] },
         });
       } else {
@@ -316,7 +316,7 @@ Here is the document content:
 ${content}`;
 
         response = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
+          model: 'gemini-2.5-flash',
           contents: prompt,
         });
       }
@@ -330,14 +330,19 @@ ${content}`;
       const { content, fileName, fileType } = req.body;
       let textFallback = "";
       try {
-        const base64Data = content.split(',')[1] || content;
-        const decodedText = Buffer.from(base64Data, 'base64').toString('utf8');
-        // Let's verify if the decoded string looks primarily like plain printable text
-        if (decodedText && /^[\x20-\x7E\r\n\t]*$/.test(decodedText.slice(0, 50))) {
-          textFallback = decodedText;
+        const isPlain = fileType?.startsWith('text/') || fileName?.endsWith('.txt') || fileName?.endsWith('.csv');
+        if (isPlain) {
+          textFallback = content;
+        } else {
+          const base64Data = content.includes(';base64,') ? content.split(',')[1] : content;
+          const decodedText = Buffer.from(base64Data, 'base64').toString('utf8');
+          // Let's verify if the decoded string looks primarily like plain printable text
+          if (decodedText && /^[\x20-\x7E\r\n\t]*$/.test(decodedText.slice(0, 50))) {
+            textFallback = decodedText;
+          }
         }
       } catch (e) {
-        console.warn("Base64 text decode fallback failed:", e);
+        console.warn("Text decode fallback failed:", e);
       }
       
       if (!textFallback) {
@@ -388,7 +393,7 @@ Please extract:
 5. Target Discharge Date (in YYYY-MM-DD format)`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
           systemInstruction,
@@ -467,7 +472,7 @@ Perform the following tasks:
 2. Cross-reference the draft against all minimum information requirements in Guideline GL2022_005. Pinpoint exactly what is missing or omitted from the provided text, and return a structured checklist of gap alerts in the "missingInfoAnalysis" string with exact page and section citations.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
           systemInstruction,
@@ -516,7 +521,7 @@ Produce a JSON containing:
 
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
+          model: 'gemini-2.5-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
