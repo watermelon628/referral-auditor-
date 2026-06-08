@@ -31,6 +31,35 @@ const app = express();
 app.use(express.json({ limit: '30mb' }));
 app.use(express.urlencoded({ limit: '30mb', extended: true }));
 
+// Helper to safely parse JSON of Gemini text response, stripping markdown backticks if any
+function safeJsonParse(text: string): any {
+  const trimmed = text.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch (e) {
+    // Try to extract JSON from markdown code blocks
+    const match = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (match && match[1]) {
+      try {
+        return JSON.parse(match[1].trim());
+      } catch (inner) {
+        // Continue
+      }
+    }
+    // Try to isolate the first layer of { and }
+    const firstBrace = trimmed.indexOf('{');
+    const lastBrace = trimmed.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return JSON.parse(trimmed.slice(firstBrace, lastBrace + 1));
+      } catch (inner) {
+        // Continue
+      }
+    }
+    throw e;
+  }
+}
+
 // Resilient fallback rule-based demographics extractor when Gemini is over-quota
 function parseDemographicsFallback(manualNotes: string, cleanedMarkdown: string): any {
   const text = `${manualNotes || ''}\n${cleanedMarkdown || ''}`;
@@ -413,7 +442,7 @@ Please extract:
       });
 
       const responseText = response.text || '{}';
-      const parsedData = JSON.parse(responseText.trim());
+      const parsedData = safeJsonParse(responseText);
       res.json(parsedData);
     } catch (error: any) {
       console.error('Error in /api/detect-demographics:', error);
@@ -462,7 +491,7 @@ DOB: ${dob}
 
 --- PROVIDED LETTER TEXT (MANUAL NOTES OR UPLOADED SCAN) ---
 Raw Manual Entries:
-No manual notes.
+${manualNotes || 'No manual notes.'}
 
 Parsed Document Scan Content:
 ${cleanedMarkdown || 'No scan contents.'}
@@ -495,7 +524,7 @@ Perform the following tasks:
       });
 
       const responseText = response.text || '{}';
-      const parsedData = JSON.parse(responseText.trim());
+      const parsedData = safeJsonParse(responseText);
       res.json(parsedData);
     } catch (error: any) {
       console.error('Error in /api/consolidate-notes:', error);
@@ -535,7 +564,7 @@ Produce a JSON containing:
             }
           }
         });
-        const parsed = JSON.parse(response.text || '{}');
+        const parsed = safeJsonParse(response.text || '{}');
         res.json({
           patientLetter: parsed.patientLetter || `Dear ${name},\n\nWe successfully prepared your care transition guidelines...`,
           electronicLetter: parsed.electronicLetter || `EHR REPORT: ${name}`
