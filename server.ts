@@ -388,7 +388,8 @@ The PDF or image document could not be processed using online cloud OCR. You can
 3. **Execute Audit**: Click **Audit Draft Against GL2022_005** to run a highly comprehensive deterministic clinical compliance check immediately!`;
       }
       
-      res.json({ cleanedMarkdown: textFallback, isQuotaError: true });
+      const errorDetails = error?.message || 'Unknown API Error';
+      res.json({ cleanedMarkdown: textFallback, isQuotaError: true, serverErrorDetails: errorDetails });
     }
   });
 
@@ -447,7 +448,8 @@ Please extract:
       console.error('Error in /api/detect-demographics:', error);
       console.log('Activating resilient demographic parser fallback due to API status...');
       const fallbackResult = parseDemographicsFallback(req.body.manualNotes, req.body.cleanedMarkdown);
-      res.json({ ...fallbackResult, isQuotaError: true });
+      const errorDetails = error?.message || 'Unknown API Error';
+      res.json({ ...fallbackResult, isQuotaError: true, serverErrorDetails: errorDetails });
     }
   });
 
@@ -529,7 +531,8 @@ Perform the following tasks:
       console.error('Error in /api/consolidate-notes:', error);
       console.log('Activating resilient clinical safety audit fallback due to API status...');
       const fallbackResult = auditNotesFallback(req.body.name, req.body.dob, req.body.manualNotes, req.body.cleanedMarkdown);
-      res.json({ ...fallbackResult, isQuotaError: true });
+      const errorDetails = error?.message || 'Unknown API Error';
+      res.json({ ...fallbackResult, isQuotaError: true, serverErrorDetails: errorDetails });
     }
   });
 
@@ -572,7 +575,8 @@ Produce a JSON containing:
         console.warn('EHR / Patient Letter Generator using resilient standard fallback values.');
         const patientLetter = `### Dear ${name || 'Patient'},\n\nThis is your Patient-Friendly Care Transition Guideline prepared for your discharge home.\n\n* **Your Treatment Overview**: Based on audited NSW Health records, you has completed your specialized program securely. Ensure you take your medications at the designated timeframes.\n* **Safety Warnings & Signs**: Contact your local care unit immediately or dial 000 if you experience unexpected dizziness, acute pain, or recurring falls.\n* **General Practitioner Check**: Follow up with your GP within the designated timeframe. Thank you for choosing our hospital safety program.`;
         const electronicLetter = `### EHR ELECTRONIC DISCHARGE SUMMARY\n\n**PATIENT IDENTIFICATION**:\n- **Full Name**: ${name || 'N/A'}\n- **Date of Birth**: ${dob || 'N/A'}\n- **Clinical Gender**: ${gender || 'N/A'}\n\n**CLINICAL SUMMARY SECTION**:\n- **Referral Background**: Document scanned and audited against NSW Health GL2022_005 requirements.\n- **Discharge Outcome**: Verified for return to outpatient General Practice oversight with pending trial diagnostics recorded in active records.\n- **Signoff Authority**: Verified by Electronic Signature credential validation logs.`;
-        res.json({ patientLetter, electronicLetter, isQuotaError: true });
+        const errorDetails = errQuota?.message || 'Unknown API Error';
+        res.json({ patientLetter, electronicLetter, isQuotaError: true, serverErrorDetails: errorDetails });
       }
     } catch (error: any) {
       console.error('Error in /api/generate-letters:', error);

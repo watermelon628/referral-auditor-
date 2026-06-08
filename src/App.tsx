@@ -41,6 +41,7 @@ import { Patient } from './types';
 import { DocumentCleaner } from './components/DocumentCleaner';
 import { MarkdownView } from './components/MarkdownView';
 import { GuidelineViewer } from './components/GuidelineViewer';
+import { detectDemographics, consolidateNotes, generateLetters } from './services/geminiService';
 
 // Standard minimum documentation requirements under NSW Health GL2022_005 Section 2.1.1
 const MINIMUM_REQUIREMENTS = [
@@ -548,22 +549,10 @@ export default function App() {
     if (!patientToDetect || (!patientToDetect.manualNotes && !patientToDetect.cleanedMarkdown)) return;
     setIsDetectingDemographics(true);
     try {
-      const response = await fetch('/api/detect-demographics', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          manualNotes: patientToDetect.manualNotes,
-          cleanedMarkdown: patientToDetect.cleanedMarkdown,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Demographics parsing failed.');
-      }
-
-      const data = await response.json();
+      const data = await detectDemographics(
+        patientToDetect.manualNotes || '',
+        patientToDetect.cleanedMarkdown || ''
+      );
       
       const updated = {
         ...patientToDetect,
@@ -576,7 +565,7 @@ export default function App() {
       
       updateSelectedPatient(updated);
       if (data.isQuotaError) {
-        showNotice('⚠️ Free Sandbox API quota reached. Extracted details via backup rule engine!');
+        setErrorMessage(`Fallback engine used. Server Error: ${data.serverErrorDetails || 'API error'}`);
       } else {
         showNotice('✨ Correlated demographic profile details from notes!');
       }
@@ -660,24 +649,12 @@ export default function App() {
     }, 200);
 
     try {
-      const response = await fetch('/api/consolidate-notes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: selectedPatient.name,
-          dob: selectedPatient.dob,
-          manualNotes: selectedPatient.manualNotes,
-          cleanedMarkdown: selectedPatient.cleanedMarkdown,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Server returned an error while consolidating records.');
-      }
-
-      const data = await response.json();
+      const data = await consolidateNotes(
+        selectedPatient.name,
+        selectedPatient.dob,
+        selectedPatient.manualNotes || '',
+        selectedPatient.cleanedMarkdown || ''
+      );
       
       clearInterval(progressInterval);
       setAuditProgress(100);
@@ -694,7 +671,7 @@ export default function App() {
       setShowInputs(false);
 
       if (data.isQuotaError) {
-        showNotice('⚠️ API Quota limit. Run safety auditer using clinical reference backup engine!');
+        setErrorMessage(`Fallback engine used. Server Error: ${data.serverErrorDetails || 'API error'}`);
       } else {
         showNotice('Successfully validated discharge letter gaps and safety requirements!');
       }
@@ -714,26 +691,14 @@ export default function App() {
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/generate-letters', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: selectedPatient.name,
-          dob: selectedPatient.dob,
-          gender: selectedPatient.gender,
-          summary: selectedPatient.summary,
-          manualNotes: selectedPatient.manualNotes,
-          cleanedMarkdown: selectedPatient.cleanedMarkdown,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Server returned an error while generating letters.');
-      }
-
-      const data = await response.json();
+      const data = await generateLetters(
+        selectedPatient.name,
+        selectedPatient.dob,
+        selectedPatient.gender,
+        selectedPatient.summary || '',
+        selectedPatient.manualNotes || '',
+        selectedPatient.cleanedMarkdown || ''
+      );
       updateSelectedPatient({
         ...selectedPatient,
         patientLetter: data.patientLetter,

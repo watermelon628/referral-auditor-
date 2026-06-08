@@ -7,6 +7,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle2, Lock, Sparkles, FileSpreadsheet, Eye, Save, AlertTriangle, RefreshCw, Clipboard } from 'lucide-react';
 import { Patient } from '../types';
 import { MarkdownView } from './MarkdownView';
+import { cleanDocument } from '../services/geminiService';
 
 interface DocumentCleanerProps {
   patient: Patient;
@@ -64,29 +65,12 @@ export function DocumentCleaner({ patient, onUpdatePatient }: DocumentCleanerPro
 
   const sendToCleanApi = async (content: string, fileName: string, fileType: string) => {
     try {
-      const response = await fetch('/api/clean-doc', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content, fileName, fileType }),
-      });
-
-      if (!response.ok) {
-        let errorMsg = 'Server responded with an error during clinical cleaning.';
-        try {
-          const errData = await response.json();
-          if (errData && errData.error) {
-            errorMsg = `Clinical cleaning error: ${errData.error}`;
-          }
-        } catch (e) {
-          // Fallback if not JSON or parsing fails
-        }
-        throw new Error(errorMsg);
+      const data = await cleanDocument(content, fileName, fileType);
+      
+      if (data.isQuotaError) {
+        setErrorWord(`Fallback engine used. Server Error: ${data.serverErrorDetails || 'API error'}`);
       }
 
-      const data = await response.json();
-      
       onUpdatePatient({
         ...patient,
         uploadedDocName: fileName,
