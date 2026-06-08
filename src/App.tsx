@@ -575,7 +575,11 @@ export default function App() {
       };
       
       updateSelectedPatient(updated);
-      showNotice('✨ Correlated demographic profile details from notes!');
+      if (data.isQuotaError) {
+        showNotice('⚠️ Free Sandbox API quota reached. Extracted details via backup rule engine!');
+      } else {
+        showNotice('✨ Correlated demographic profile details from notes!');
+      }
     } catch (err: any) {
       console.error('Demographics extraction failed:', err);
     } finally {
@@ -689,7 +693,11 @@ export default function App() {
 
       setShowInputs(false);
 
-      showNotice('Successfully validated discharge letter gaps and safety requirements!');
+      if (data.isQuotaError) {
+        showNotice('⚠️ API Quota limit. Run safety auditer using clinical reference backup engine!');
+      } else {
+        showNotice('Successfully validated discharge letter gaps and safety requirements!');
+      }
     } catch (err: any) {
       clearInterval(progressInterval);
       console.error(err);
