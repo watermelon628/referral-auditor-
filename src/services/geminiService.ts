@@ -148,7 +148,7 @@ Please extract:
 5. Target Discharge Date (in YYYY-MM-DD format)`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         systemInstruction,
@@ -220,7 +220,7 @@ Perform the following tasks:
 2. Cross-reference the draft against all minimum information requirements in Guideline GL2022_005. Pinpoint exactly what is missing or omitted from the provided text, and return a structured checklist of gap alerts in the "missingInfoAnalysis" string with exact page and section citations.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         systemInstruction,
@@ -261,7 +261,7 @@ Produce a JSON containing:
 2. "electronicLetter": A polished electronic EHR clinical transition referral note featuring bold identifiers at top, followed by principal diagnoses, chronological procedures, and discharge medications grouped strictly as New, Changed, and Unchanged.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-3.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -321,7 +321,7 @@ export async function cleanDocument(content: string, fileName: string, fileType:
       // Note: for PDFs, usually Base64 is sent directly
       const base64Content = content.includes(';base64,') ? content.split(',')[1] : content;
       response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.5-flash',
         contents: { parts: [{ inlineData: { mimeType: mappedMimeType, data: base64Content } }, { text: "You are a professional medical record data cleaner and OCR transcriber. Transcribe the provided medical document (image or PDF) into clean Markdown text. You must transcribe it EXACTLY word-for-word from what is visible in the physical record. You must REMOVE all page numbers, headers, and footers. Ensure all tables, grids, or clinical measurements arrays are cleanly formatted as Markdown tables. Do NOT add any introduction, headers/footers, metadata lines, or outer block wrapping like (```markdown). Provide only the word-for-word cleaned text content." }] },
       });
     } else {
@@ -336,7 +336,7 @@ Rules:
 Here is the document content:
 ${content}`;
       response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.5-flash',
         contents: prompt,
       });
     }
