@@ -1,0 +1,6 @@
+{
+  "name": "Referral Letter Auditor",
+  "description": "A clinician's assistant to audit written referral letters, checking them against standard discharge guidelines (such as NSW Health GL2022_005) to ensure no required clinical elements are missing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
