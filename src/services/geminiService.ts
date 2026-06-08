@@ -1,7 +1,9 @@
 import { GoogleGenAI, Type } from '@google/genai';
 
 // @ts-ignore
-const apiKey = (import.meta as any).env?.OPEN_API_KEY || process.env.GEMINI_API_KEY ;
+const envApiKey = typeof import.meta !== 'undefined' && import.meta.env ? (import.meta.env.VITE_API_KEY || import.meta.env.VITE_GEMINI_API_KEY || (import.meta as any).env.OPEN_API_KEY) : '';
+const processApiKey = typeof process !== 'undefined' && process.env ? process.env.GEMINI_API_KEY : '';
+const apiKey = envApiKey || processApiKey || '';
 
 export const isGeminiConfigured = () => !!apiKey;
 
