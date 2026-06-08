@@ -264,7 +264,7 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
     });
 
     if (missingInThisCategory.length > 0) {
-      missingGapsList.push(`* **${req.title} Gaps**:\n   ` + missingInThisCategory.map(f => `- Missing required element: **${f}**`).join('\n   ') + `\n   [referenced under NSW Health GL2022_005 Section 2.1]`);
+      missingGapsList.push(`* **${req.title} Gaps**:\n   ` + missingInThisCategory.map(f => `- Missing required element: **${f}**`).join('\n   '));
     }
   });
 
@@ -281,7 +281,7 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
 #### 📝 Compliance Recommendations
 - Verify patient demographics matches standard primary care registries.
 - Ensure discharge medication categories contain alphabetical orderings.
-- Append precise admitting supervisor names and designations before clinical signoff. [source: Guideline GL2022_005 Page 7, Section 2.1.2]`;
+- Append precise admitting supervisor names and designations before clinical signoff.`;
 
   const missingInfoAnalysis = `### ⚠️ Missing Required NSW Health GL2022_005 Parameters:
 
@@ -289,9 +289,9 @@ The document has been audited against standard requirements. The following eleme
 
 ${missingGapsList.join('\n\n')}
 
-* **Invasive Interventions / Operations**: No chronological lists or explicit 'nil performed' statements were identified in the scanned draft. [GL2022_005 Page 11, Section 2.1.2]
-* **Medications Categorization**: No alphabetical medication listings sorted distinctly as 'New', 'Changed', and 'Unchanged' were identified in the transcript. [GL2022_005 Page 13, Section 2.1.2]
-* **Adverse Events / Drug Reactions**: Explicit 'nil known' or allergic manifestations were not documented. [GL2022_005 Page 15, Section 2.1.2]`;
+* **Invasive Interventions / Operations**: No chronological lists or explicit 'nil performed' statements were identified in the scanned draft.
+* **Medications Categorization**: No alphabetical medication listings sorted distinctly as 'New', 'Changed', and 'Unchanged' were identified in the transcript.
+* **Adverse Events / Drug Reactions**: Explicit 'nil known' or allergic manifestations were not documented.`;
 
   return { summary, missingInfoAnalysis };
 }
@@ -327,7 +327,7 @@ ${missingGapsList.join('\n\n')}
         };
 
         response = await ai.models.generateContent({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-3.5-flash',
           contents: { parts: [imagePart, textPart] },
         });
       } else {
@@ -344,7 +344,7 @@ Here is the document content:
 ${content}`;
 
         response = await ai.models.generateContent({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-3.5-flash',
           contents: prompt,
         });
       }
@@ -465,8 +465,8 @@ Your goal is to parse and evaluate the provided clinical letter (either submitte
 You must construct a clinical summary of the details that ARE represented, and compile a rigorous bulleted checklist of any missing minimum information elements.
 
 CRITICAL FORMATTING GUIDELINES:
-- For the "summary" property, write a professional evaluation detailing the clinical course, diagnoses, medications, and recommendations represented in the provided draft. Organize this into clean, scannable dot points under clear markdown section headers. CITE where in GL2022_005 each field is outlined (e.g. "[source: Guideline GL2022_005 Page 7, Section 2.1.2]"). Do NOT use generic banners or decorative separators.
-- For the "missingInfoAnalysis" property, you must assemble a clear audit checklist of specifically what clinical parameters are completely omitted, unmentioned, or missing from the letter. Organize by category. Each entry MUST be listed extremely simply and directly, specifying ONLY the raw missing fields or topics (e.g., "MRN, Age, Sex, Gender, Address, and Telephone number"), with no verbose intro phrases, no conversational sentences, and no narrative fluff. Just list exactly what is missing. All direct source page/section citations should be appended in bracket style at the very end.
+- For the "summary" property, write a professional evaluation detailing the clinical course, diagnoses, medications, and recommendations represented in the provided draft. Organize this into clean, scannable dot points under clear markdown section headers. Do NOT use generic banners or decorative separators.
+- For the "missingInfoAnalysis" property, you must assemble a clear audit checklist of specifically what clinical parameters are completely omitted, unmentioned, or missing from the letter. Organize by category. Each entry MUST be listed extremely simply and directly, specifying ONLY the raw missing fields or topics (e.g., "MRN, Age, Sex, Gender, Address, and Telephone number"), with no verbose intro phrases, no conversational sentences, and no narrative fluff. Just list exactly what is missing.
 
 NSW Health Guideline GL2022_005 Minimum Information Specifications (use to audit):
 1. Patient Details: Name on a single bold line, MRN, Age, Sex, Gender, DOB, Address, Telephone.
@@ -482,8 +482,8 @@ NSW Health Guideline GL2022_005 Minimum Information Specifications (use to audit
 11. Follow-up Appointments: Description, date/time, booking status, primary care provider, location, contact, preparation instructions.
 
 Format your output as a JSON object with:
-1. "summary": A professional clinical summary of findings represented in the letter, formatted using clean markdown with guideline citations.
-2. "missingInfoAnalysis": A comprehensive structured bulleted audit listing ONLY the clinical or logistical elements that are completely unmentioned or missing in the provided letter, with precise source page/section citations.`;;
+1. "summary": A professional clinical summary of findings represented in the letter, formatted using clean markdown.
+2. "missingInfoAnalysis": A comprehensive structured bulleted audit listing ONLY the clinical or logistical elements that are completely unmentioned or missing in the provided letter.`;
 
       const prompt = `Perform a compliance safety audit on the following clinical letter text:
 Patient Demographics Context:
@@ -498,8 +498,8 @@ Parsed Document Scan Content:
 ${cleanedMarkdown || 'No scan contents.'}
 
 Perform the following tasks:
-1. Extract and summarize the clinical details and instructions already represented in this text under coherent headers in the "summary" string, citing GL2022_005 reference locations.
-2. Cross-reference the draft against all minimum information requirements in Guideline GL2022_005. Pinpoint exactly what is missing or omitted from the provided text, and return a structured checklist of gap alerts in the "missingInfoAnalysis" string with exact page and section citations.`;
+1. Extract and summarize the clinical details and instructions already represented in this text under coherent headers in the "summary" string.
+2. Cross-reference the draft against all minimum information requirements in Guideline GL2022_005. Pinpoint exactly what is missing or omitted from the provided text, and return a structured checklist of gap alerts in the "missingInfoAnalysis" string.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-1.5-flash',
@@ -512,11 +512,11 @@ Perform the following tasks:
             properties: {
               summary: {
                 type: Type.STRING,
-                description: 'Polished markdown summary of clinical findings and elements represented in the draft, with GL2022_005 section citations.',
+                description: 'Polished markdown summary of clinical findings and elements represented in the draft.',
               },
               missingInfoAnalysis: {
                 type: Type.STRING,
-                description: 'Extremely simple, high-priority bulleted list of raw missing parameters or information elements (e.g. list of "(MRN), Age, Sex, Gender, Address, Telephone number"), with zero narrative, zero conversational commentary, and direct citation brackets at the end.',
+                description: 'Extremely simple, high-priority bulleted list of raw missing parameters or information elements (e.g. list of "(MRN), Age, Sex, Gender, Address, Telephone number"), with zero narrative and zero conversational commentary.',
               },
             },
             required: ['summary', 'missingInfoAnalysis'],

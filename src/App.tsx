@@ -452,21 +452,9 @@ export default function App() {
     }
   }, [selectedPatientId, selectedPatient?.summary]);
 
-  // Auto-expand the first requirement with gaps when patient or compliance report changes
+  // Auto-collapse requirements when patient or compliance report changes
   useEffect(() => {
-    if (selectedPatient && selectedPatient.missingInfoAnalysis) {
-      const bubbles = getMissingInfoBubbles(selectedPatient.missingInfoAnalysis);
-      const firstGapReq = MINIMUM_REQUIREMENTS.find(req => 
-        bubbles.some(b => findMatchingRequirement(b.category, b.content) === req.id)
-      );
-      if (firstGapReq) {
-        setExpandedRequirementId(firstGapReq.id);
-      } else if (MINIMUM_REQUIREMENTS.length > 0) {
-        setExpandedRequirementId(MINIMUM_REQUIREMENTS[0].id);
-      }
-    } else {
-      setExpandedRequirementId(null);
-    }
+    setExpandedRequirementId(null);
   }, [selectedPatientId, selectedPatient?.missingInfoAnalysis]);
 
   // Auto-detect patient details when raw content changes, but only if name is 'New Profile'
@@ -506,23 +494,25 @@ export default function App() {
       // If line defines a heading or section category
       if (
         cleanLine.startsWith('###') || 
-        (cleanLine.startsWith('**') && cleanLine.endsWith('**')) ||
-        (cleanLine.startsWith('- **') && cleanLine.endsWith('**')) ||
-        (cleanLine.startsWith('* **') && cleanLine.endsWith('**'))
+        (cleanLine.startsWith('**') && (cleanLine.endsWith('**') || cleanLine.endsWith('**:'))) ||
+        (cleanLine.startsWith('- **') && (cleanLine.endsWith('**') || cleanLine.endsWith('**:'))) ||
+        (cleanLine.startsWith('* **') && (cleanLine.endsWith('**') || cleanLine.endsWith('**:')))
       ) {
         currentCategory = cleanLine
           .replace(/^###\s*/, '')
           .replace(/^[-*]\s*\*\*/, '')
           .replace(/^\*\*/, '')
-          .replace(/\*\*$/, '')
+          .replace(/\*\*:?$/, '')
           .replace(/^[-*]\s*/, '')
-          .replace(/:$/, '')
           .trim();
         continue;
       }
       
-      // If it is a standard bullet point line
-      if (cleanLine.startsWith('-') || cleanLine.startsWith('*')) {
+      // If it is a standard bullet point line or bracketed reference, handle accordingly
+      if (cleanLine.startsWith('[') && cleanLine.endsWith(']')) {
+         // Skip independent lines that are just citations
+         continue;
+      } else if (cleanLine.startsWith('-') || cleanLine.startsWith('*')) {
         const textContent = cleanLine.replace(/^[-*]\s*/, '').trim();
         if (textContent) {
           bubbles.push({
@@ -1219,16 +1209,6 @@ export default function App() {
                         NSW Health GL2022_005 Parameter Compliance Check
                       </p>
                     </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => setShowInputs(true)}
-                        className="h-9 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-3xs"
-                      >
-                        <ArrowLeft className="w-4 h-4 text-slate-500" />
-                        <span>Back to Notes & Letters</span>
-                      </button>
-                    </div>
                   </div>
 
                   {/* Audit Results Viewport */}
@@ -1270,10 +1250,10 @@ export default function App() {
                                         if (!req) return null;
 
                                         return (
-                                          <div className="bg-white border-2 border-red-100 rounded-xl p-5 space-y-4 shadow-3xs animate-in fade-in slide-in-from-bottom-1 duration-200">
+                                          <div className="bg-white border-2 border-red-100 rounded-xl p-5 shadow-3xs animate-in fade-in slide-in-from-bottom-1 duration-200 flex flex-col h-[400px]">
                                             
                                             {/* Step Header */}
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-4 shrink-0">
                                               <div>
                                                 <div className="flex items-center gap-2">
                                                   <span className="text-[9px] font-extrabold text-red-700 bg-red-100/70 border border-red-250/30 px-2 py-0.5 rounded uppercase tracking-wider">
@@ -1307,7 +1287,7 @@ export default function App() {
                                             </div>
 
                                             {/* Details Section */}
-                                            <div className="space-y-4">
+                                            <div className="space-y-4 flex-1 mb-4 overflow-y-auto min-h-0 pr-2 pb-1">
                                               
                                               {/* Omissions detailed list */}
                                               <div className="space-y-2">
@@ -1335,7 +1315,7 @@ export default function App() {
                                             </div>
 
                                             {/* Stepper controls */}
-                                            <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                                            <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100 mt-auto shrink-0">
                                               <button
                                                 type="button"
                                                 onClick={() => setWalkthroughIndex(prev => Math.max(0, prev - 1))}
@@ -1532,9 +1512,11 @@ export default function App() {
       {/* Patient demographics configuration modal removed in favor of quick inline extraction */}
 
       {/* Humble aesthetic page bottom credits */}
-      <footer className="bg-white border-t border-slate-200 px-6 py-4.5 text-center text-xs text-slate-400 flex flex-col sm:flex-row sm:justify-between items-center gap-2">
-        <span>&copy; {new Date().getFullYear()} SilverSafe Portal - Consolidated Medical Systems Co.</span>
-        <span className="font-mono text-[10px]">Version 1.0.4 • Secure Hospital Sandboxing Verified</span>
+      <footer className="bg-white border-t border-slate-200 px-6 py-4 flex flex-col items-start gap-1">
+        <span className="text-sm font-medium text-slate-600">Referral Letter Auditor</span>
+        <span className="text-xs text-slate-400 max-w-2xl text-left">
+          A clinician's assistant to audit written referral letters, checking them against standard discharge guidelines to ensure no required clinical elements are missing.
+        </span>
       </footer>
     </div>
   );
