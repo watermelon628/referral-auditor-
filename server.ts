@@ -328,7 +328,7 @@ ${missingGapsList.join('\n\n')}
         };
 
         response = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
+          model: 'gemini-1.5-flash',
           contents: { parts: [imagePart, textPart] },
         });
       } else {
@@ -345,7 +345,7 @@ Here is the document content:
 ${content}`;
 
         response = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
+          model: 'gemini-1.5-flash',
           contents: prompt,
         });
       }
@@ -422,7 +422,7 @@ Please extract:
 5. Target Discharge Date (in YYYY-MM-DD format)`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-1.5-flash',
         contents: prompt,
         config: {
           systemInstruction,
@@ -501,7 +501,7 @@ Perform the following tasks:
 2. Cross-reference the draft against all minimum information requirements in Guideline GL2022_005. Pinpoint exactly what is missing or omitted from the provided text, and return a structured checklist of gap alerts in the "missingInfoAnalysis" string with exact page and section citations.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-1.5-flash',
         contents: prompt,
         config: {
           systemInstruction,
@@ -550,7 +550,7 @@ Produce a JSON containing:
 
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
+          model: 'gemini-1.5-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',

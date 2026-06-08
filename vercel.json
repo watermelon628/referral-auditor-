@@ -1,9 +1,12 @@
 {
-  "version": 2,
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/index.ts"
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
