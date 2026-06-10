@@ -751,7 +751,7 @@ Produce a JSON containing:
 
   // --- Vite & Production static servers ---
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     const startDev = async () => {
       const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
