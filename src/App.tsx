@@ -46,7 +46,6 @@ import { CohortVerification } from './components/CohortVerification';
 import { MarkdownView } from './components/MarkdownView';
 import { GuidelineViewer } from './components/GuidelineViewer';
 import { detectDemographics, consolidateNotes, generateLetters } from './services/geminiService';
-import { analyzeLocally } from './services/localPythonAnalyzer';
 
 // Standard minimum documentation requirements under NSW Health GL2022_005 Section 2.1.1
 const MINIMUM_REQUIREMENTS = [
@@ -816,42 +815,6 @@ export default function App() {
     }
   };
 
-  const triggerLocalConsolidate = async (patientToAudit?: Patient) => {
-    const targetPatient = patientToAudit || selectedPatient;
-    if (!targetPatient) return;
-    setIsConsolidating(true);
-    setAuditProgress(10);
-    setAuditStatusText('Initializing local Python Pyodide engine...');
-    setErrorMessage('');
-
-    try {
-      const sourceNotes = targetPatient.cleanedMarkdown || targetPatient.manualNotes || '';
-      
-      setAuditProgress(50);
-      setAuditStatusText('Running client-side local text analysis...');
-      
-      const missingAnalysisInfo = await analyzeLocally(sourceNotes);
-      
-      setAuditProgress(100);
-      setAuditStatusText('Local analysis complete!');
-      
-      updateSelectedPatient({
-        ...targetPatient,
-        summary: sourceNotes,
-        missingInfoAnalysis: missingAnalysisInfo,
-      });
-
-      setShowInputs(false);
-      showNotice('Successfully ran local browser-based Python analysis!');
-      
-    } catch (err: any) {
-      console.error(err);
-      setErrorMessage(err.message || 'Error occurred while running Pyodide local engine.');
-    } finally {
-      setIsConsolidating(false);
-    }
-  };
-
   // Update selected patient's cohort expectations without triggering automatic AI audit immediately to prevent lag and page transitions
   const handleCohortUpdate = async (updated: Patient) => {
     updateSelectedPatient(updated);
@@ -1536,32 +1499,17 @@ export default function App() {
                           </div>
                         </div>
                       ) : (
-                        <div className="w-full max-w-md space-y-2">
-                          <button
-                            onClick={() => triggerConsolidate()}
-                            disabled={
-                              (!selectedPatient.manualNotes && !selectedPatient.cleanedMarkdown) ||
-                              (selectedPatient.uploadedDocName && !selectedPatient.aiInterpretationVerified)
-                            }
-                            className="w-full h-12.5 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:from-slate-205 disabled:to-slate-205 disabled:text-slate-400 text-white rounded-xl text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all shadow-md hover:shadow-lg disabled:cursor-not-allowed cursor-pointer select-none border-t border-emerald-500/10"
-                          >
-                            <Sparkles className="w-5 h-5 shrink-0 text-emerald-100" />
-                            <span>Check Referral Letter Gaps (Server AI)</span>
-                          </button>
-                          
-                          <button
-                            onClick={() => triggerLocalConsolidate()}
-                            disabled={
-                              (!selectedPatient.manualNotes && !selectedPatient.cleanedMarkdown) ||
-                              (selectedPatient.uploadedDocName && !selectedPatient.aiInterpretationVerified)
-                            }
-                            className="w-full h-11 px-4 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 disabled:opacity-50 disabled:bg-slate-100 disabled:text-slate-400 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow disabled:cursor-not-allowed cursor-pointer select-none"
-                            title="Perform compliance analysis locally via Python (Pyodide) directly in browser"
-                          >
-                            <Square className="w-4 h-4 shrink-0 text-amber-500" />
-                            <span>Quick Local Analysis (Browser-only Python)</span>
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => triggerConsolidate()}
+                          disabled={
+                            (!selectedPatient.manualNotes && !selectedPatient.cleanedMarkdown) ||
+                            (selectedPatient.uploadedDocName && !selectedPatient.aiInterpretationVerified)
+                          }
+                          className="w-full max-w-md h-12.5 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:from-slate-205 disabled:to-slate-205 disabled:text-slate-400 text-white rounded-xl text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all shadow-md hover:shadow-lg disabled:cursor-not-allowed cursor-pointer select-none border-t border-emerald-500/10"
+                        >
+                          <Sparkles className="w-5 h-5 shrink-0 text-emerald-100" />
+                          <span>Check Referral Letter Gaps</span>
+                        </button>
                       )}
 
                       {selectedPatient.uploadedDocName && !selectedPatient.aiInterpretationVerified && (
