@@ -22,6 +22,18 @@ export interface Patient {
   patientLetter: string | null;
   electronicLetter: string | null;
   aiInterpretationVerified?: boolean;
+  isOutOfScope?: boolean;
+  isDayOnly?: boolean;
+  isWellBabyObstetric?: boolean;
+  isVulnerable?: boolean;
+  isCorrectional?: boolean;
+  isMentalHealthDischargeNonMH?: boolean;
+  hasAdditionalMedicines?: boolean;
+  isFollowUpSecureHandoverChecked?: boolean;
+  vulnerableWarningSigns?: string;
+  vulnerableMitigation?: string;
+  vulnerableContingency?: string;
+  vulnerableContacts?: string;
   createdAt: string;
 }
 

@@ -14,12 +14,36 @@ export async function detectDemographics(manualNotes: string, cleanedMarkdown: s
   }
 }
 
-export async function consolidateNotes(name: string, dob: string, manualNotes: string, cleanedMarkdown: string) {
+export async function consolidateNotes(
+  name: string,
+  dob: string,
+  manualNotes: string,
+  cleanedMarkdown: string,
+  isVulnerable?: boolean,
+  isOutOfScope?: boolean,
+  isDayOnly?: boolean,
+  isWellBabyObstetric?: boolean,
+  isCorrectional?: boolean,
+  isMentalHealthDischargeNonMH?: boolean,
+  hasAdditionalMedicines?: boolean
+) {
   try {
     const response = await fetch('/api/consolidate-notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, dob, manualNotes, cleanedMarkdown })
+      body: JSON.stringify({
+        name,
+        dob,
+        manualNotes,
+        cleanedMarkdown,
+        isVulnerable,
+        isOutOfScope,
+        isDayOnly,
+        isWellBabyObstetric,
+        isCorrectional,
+        isMentalHealthDischargeNonMH,
+        hasAdditionalMedicines
+      })
     });
     return await response.json();
   } catch (error: any) {

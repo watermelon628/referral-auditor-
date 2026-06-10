@@ -422,7 +422,7 @@ Please extract:
 5. Target Discharge Date (in YYYY-MM-DD format)`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.5-flash',
         contents: prompt,
         config: {
           systemInstruction,
@@ -453,14 +453,25 @@ Please extract:
     }
   });
 
-  // API 2: Consolidate & Analyze Notes (and check for missing elderly discharge information against GL2022_005)
   app.post('/api/consolidate-notes', async (req, res) => {
     try {
-      const { manualNotes, cleanedMarkdown, name, dob } = req.body;
+      const {
+        manualNotes,
+        cleanedMarkdown,
+        name,
+        dob,
+        isVulnerable,
+        isOutOfScope,
+        isDayOnly,
+        isWellBabyObstetric,
+        isCorrectional,
+        isMentalHealthDischargeNonMH,
+        hasAdditionalMedicines
+      } = req.body;
 
-      console.log(`Consolidating data for patient: ${name}`);
+      console.log(`Consolidating data for patient: ${name}, isVulnerable: ${isVulnerable}, isCorrectional: ${isCorrectional}`);
 
-      const systemInstruction = `You are an expert clinical compliance auditor helping clinicians check written referral or discharge letters in accordance with NSW Health Guideline GL2022_005 standards.
+      let systemInstruction = `You are an expert clinical compliance auditor helping clinicians check written referral or discharge letters in accordance with NSW Health Guideline GL2022_005 standards.
 Your goal is to parse and evaluate the provided clinical letter (either submitted as manual text or parsed via OCR scan) to see where it fails to fulfill standard minimum discharge or referral details.
 You must construct a clinical summary of the details that ARE represented, and compile a rigorous bulleted checklist of any missing minimum information elements.
 
@@ -469,6 +480,7 @@ CRITICAL FORMATTING GUIDELINES:
 - For the "missingInfoAnalysis" property, you must assemble a clear audit checklist of specifically what clinical parameters are completely omitted, unmentioned, or missing from the letter. Organize by category. Each entry MUST be listed extremely simply and directly, specifying ONLY the raw missing fields or topics (e.g., "MRN, Age, Sex, Gender, Address, and Telephone number"), with no verbose intro phrases, no conversational sentences, and no narrative fluff. Just list exactly what is missing.
 
 NSW Health Guideline GL2022_005 Minimum Information Specifications (use to audit):
+Standard patients follow "requirements for minimum information" 2.1.1 of the RAG:
 1. Patient Details: Name on a single bold line, MRN, Age, Sex, Gender, DOB, Address, Telephone.
 2. Hospital/Clinician Details: Hospital name/address, specialty, discharging clinician designation, supervisor/admitting supervisor, signature or electronic credentials.
 3. Presentation Details: Admission/discharge dates, length of stay, clinical unit, clinical specialty, discharge destination.
@@ -479,9 +491,92 @@ NSW Health Guideline GL2022_005 Minimum Information Specifications (use to audit
 8. Medicines on Discharge: Grouped strictly as: 'New' at top, followed by 'Changed', followed by 'Unchanged'. Ordered alphabetically.
 9. Medicines directions & Ceased medicines: Generic first, then brand; strength, form, route; dosage, frequency; duration. Ceased medicines detailed with reason and duration. Ongoing monitoring requirements, de-prescribing plans, dose administration aids.
 10. Alerts: Critical/Falls alerts as bullet points. Specific treatment and care recommendations with action ownership and timeframes.
-11. Follow-up Appointments: Description, date/time, booking status, primary care provider, location, contact, preparation instructions.
+11. Follow-up Appointments: Description, date/time, booking status, primary care provider, location, contact, preparation instructions.`;
 
-Format your output as a JSON object with:
+      if (isOutOfScope) {
+        systemInstruction += `
+
+Important Scope Exception Notice for this patient:
+This Guideline applies to all admitted patients being discharged from a NSW public hospital, with the exception of:
+- Patients being discharged from a mental health inpatient unit.
+- Patients discharged home from an emergency department.
+- Patients attending outpatient clinic appointments.
+
+Patients who discharge against medical advice are still included in the scope. At a minimum provide a completed discharge summary as outlined in this Guideline.
+Perform the full standard audit as normal, but include a brief overarching note in your missing info analysis or summary about these scope exceptions if relevant.`;
+      }
+      
+      if (isWellBabyObstetric) {
+        systemInstruction = `You are an expert clinical compliance auditor.
+The patient is marked as WELL-BABY / OBSTETRIC. They do not follow 2.1.1.
+- In the "summary" property, state that maternity/newborn patients are subject to specific midwifery postnatal pathways.
+- In the "missingInfoAnalysis" property, output exactly and ONLY: "For well mothers and babies, discharge can be initiated and coordinated by midwifery staff as per local Postnatal Clinical Pathways, and under the framework of the National Midwifery Guidelines for Consultation and Referral. Discharge summaries must be complemented by the My Personal Health Record and provided to the mother."`;
+      } else if (isDayOnly) {
+        systemInstruction = `You are an expert clinical compliance auditor.
+The patient is DAY ONLY and does NOT follow 2.1.1 requirements for minimum information. You must verify and check ONLY for the following information specified in GL2022_005 Section 3.1.2:
+1. Patient identification: Name, Medical Record Number (MRN), Age, Sex, Gender, Date of birth (age in years or months/days where applicable), Address, Telephone number.
+2. Presenting problem / reason for procedure.
+3. Planned procedure.
+4. Summary of procedure, include only these points:
+  - Date of procedure
+  - AMO and / or procedural list
+  - Primary procedure performed
+  - Outcomes / complications
+5. Continued care recommendations: required post-operative precautions (safety warning signs), specific post-operative care instructions e.g. medicine instructions, and planned follow-up/review arrangements (only use these points from 3.1.2).
+
+In your "missingInfoAnalysis", check only for these items. List exactly what is missing simply and directly, keeping it strictly aligned with Section 3.1.2.`;
+      } else {
+        // Standard 2.1.1 rules
+        if (isVulnerable) {
+          systemInstruction += `
+
+CRITICAL AUDIT RULE — VULNERABLE COHORT SPECIAL MANDATE (GL2022_005 Section 2.1.1):
+The patient is marked as belonging to a "Vulnerable Cohort" (cognitive impairment, complex dementia, recurrent readmission). Under GL2022_005 Section 2.1.1, the referral/discharge letter MUST contain clinical safety and escalation information:
+"For vulnerable patient groups who are at increased risk of rehospitalisation, the discharge document must also include information on: early warning signs of relapse of their current illness, identification of risks and strategies to reduce each risk identified, contingency plans and relapse prevention strategies, and emergency telephone contacts to access appropriate care."
+
+If any of these 4 elements (early warning signs, risk mitigation/strategies, contingency plans, emergency telephone contacts) are not explicitly documented in the text, you MUST flag them as missing in your "missingInfoAnalysis" list under the category "Vulnerable Cohorts (Sec 2.1.1)" using those exact terms.`;
+        }
+
+        if (isCorrectional) {
+          systemInstruction += `
+
+CRITICAL AUDIT RULE — CORRECTIONAL SECURITY MANDATE (GL2022_005 Section 2.1.1):
+The patient is returning to Correctional Custody. Under Correctional Security Directive GL2022_005 Section 2.1.1, Escorted justice-health patients must NEVER be given specific follow-up appointments, times, or hospital booking dates directly in their clinical letters to prevent flight risks and security threats:
+"Place the prepared discharge documentation in a sealed envelope marked ‘Confidential’ and for the attention of the Justice Health and Forensic Mental Health Network. Give the sealed envelope to the escorting corrections officers who will deliver it to a Justice Health and Forensic Mental Health Network clinician at the receiving facility.
+Do not advise the patient of any follow-up appointments. This poses a security risk and if disclosed the appointment will need to be re-scheduled."
+
+- DO NOT flag follow-up booking times/locations as missing. Instead, write in "missingInfoAnalysis" that specific appointments cannot be disclosed to the patient and documentation must be handed over in a physical sealed envelope.`;
+        }
+
+        if (isMentalHealthDischargeNonMH) {
+          systemInstruction += `
+
+CRITICAL AUDIT RULE — MENTAL HEALTH DISCHARGE FROM PHYSICAL WARD:
+The patient is a mental health consumer being discharged from a physical/surgical ward.
+"Where a patient being discharged from a general hospital bed and has received treatment/consultation with mental health services during their stay, the discharging team are to collaborate with the responsible mental health clinician on discharge planning. This will ensure discharge documentation provides clear advice on post-discharge mental health care, including referral to community-based services where appropriate.
+Please refer to NSW Health Policy Directive Discharge Planning and Transfer of Care for Consumers of NSW Mental Health Services (PD2019_045) for further information"
+
+If there are no details of collaborating with mental health service or community-based post-discharge mental health care, you must flag this as missing under the category "Mental Health Collaboration" in "missingInfoAnalysis".`;
+        }
+
+        if (hasAdditionalMedicines) {
+          systemInstruction += `
+
+CRITICAL AUDIT RULE — ADDITIONAL MEDICINE INSTRUCTIONS:
+Additional ongoing medicine management instructions are required.
+"Where additional instructions are required for ongoing medicine management, the discharging clinician, in consultation with the pharmacist (where available), will document these instructions in a section following the ‘ceased medicines’ section of the discharge summary. Information to be documented in this section may include:
+- Ongoing monitoring requirements, e.g., therapeutic drug monitoring, metabolic monitoring in patients on long term anti-psychotics, International Normalised Ratio (INR) testing and targets for warfarin
+- Medicine dose adjustment requirements, including recommendations for future cessation of medicines e.g., weaning dose plan of corticosteroids
+- Recommendation for commencement of a dose administration aid
+- Recommendations for pain management for post-operative patients, including information on dose reduction and/or cessation of opioids.
+Refer to NSW Health Policy Directive High-Risk Medicines Management (PD2020_045) and NSW Health Policy Directive Medication Handling in NSW Public Health Facilities (PD2013_043) for further information. If a separate patient friendly medication list is provided, the information must be consistent with that of the discharge summary, and any changes made must be reflected in both documents.
+Patient friendly medication lists must state the date they were authorised on both the electronic and printed copy."
+
+You must check if these additional documentation parameters are specified. If any required monitoring, dose adjustments, dose aids, or pain/opioid reduction plans are needed but not documented, you must flag them under the category "Additional Medicine Instructions" in "missingInfoAnalysis".`;
+        }
+      }
+
+      systemInstruction += `\n\nFormat your output as a JSON object with:
 1. "summary": A professional clinical summary of findings represented in the letter, formatted using clean markdown.
 2. "missingInfoAnalysis": A comprehensive structured bulleted audit listing ONLY the clinical or logistical elements that are completely unmentioned or missing in the provided letter.`;
 
@@ -502,7 +597,7 @@ Perform the following tasks:
 2. Cross-reference the draft against all minimum information requirements in Guideline GL2022_005. Pinpoint exactly what is missing or omitted from the provided text, and return a structured checklist of gap alerts in the "missingInfoAnalysis" string.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.5-flash',
         contents: prompt,
         config: {
           systemInstruction,
@@ -552,7 +647,7 @@ Produce a JSON containing:
 
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-3.5-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
