@@ -38,7 +38,13 @@ import {
   Trash2,
   ShieldAlert,
   CheckSquare,
-  Square
+  Square,
+  ThumbsUp,
+  ThumbsDown,
+  MessageSquare,
+  X,
+  Bug,
+  ExternalLink
 } from 'lucide-react';
 import { Patient } from './types';
 import { DocumentCleaner } from './components/DocumentCleaner';
@@ -183,15 +189,15 @@ const MINIMUM_REQUIREMENTS = [
 const DAY_ONLY_REQUIREMENTS = [
   {
     id: 'do_patient_identification',
-    title: 'Patient Identification',
+    title: 'Provided Patient identification',
     displayOrder: 1,
-    standard: 'Patient identification: 1. Name, 2. Medical Record Number (MRN), 3. Age, 4. Sex, 5. Gender, 6. Date of birth (age in years or months/days where applicable), 7. Address, 8. Telephone number.',
+    standard: 'Provided Patient identification contains: Name, Medical Record Number (MRN), Age, Sex, Gender, Date of birth (age in years or months/days where applicable), Address, Telephone number.',
     source: 'Section 3.1.2 - Patient identification',
     keywords: ['patient', 'demographics', 'name', 'mrn', 'dob', 'address', 'telephone', 'identification', 'age', 'sex', 'gender']
   },
   {
     id: 'do_presenting_problem',
-    title: 'Presenting Problem / Reason for Procedure',
+    title: 'Presenting Problem/Reason for procedure',
     displayOrder: 2,
     standard: 'Clear description of the presenting clinical problem or exact indication/reason for the surgical/interventional procedure.',
     source: 'Section 3.1.2 - Presenting Problem/Reason for procedure',
@@ -199,25 +205,25 @@ const DAY_ONLY_REQUIREMENTS = [
   },
   {
     id: 'do_planned_procedure',
-    title: 'Planned Procedure',
+    title: 'Planned procedure',
     displayOrder: 3,
-    standard: 'Details of the scheduled or intended surgical/interventional procedure planned for the admission.',
+    standard: 'Invasive clinical interventions including operations and procedures must be documented in chronological order. If no procedures were performed, document ‘nil performed’. And “Procedures with medical devices Where a medical device has been implanted or explanted during the inpatient visit, the discharging clinician must include the product name, type, model and batch number for all devices.”',
     source: 'Section 3.1.2 - Planned procedure',
-    keywords: ['planned procedure', 'scheduled', 'proposed', 'planned']
+    keywords: ['planned procedure', 'scheduled', 'proposed', 'planned', 'invasive', 'medical device', 'implanted', 'explanted', 'operation', 'chronological']
   },
   {
     id: 'do_procedure_summary',
-    title: 'Summary of Procedure',
+    title: 'Summary of procedure',
     displayOrder: 4,
-    standard: "Date of procedure\nAMO and / or procedural list\nPrimary procedure performed\nOutcomes / complications",
+    standard: 'Summary of procedure includes: Date of procedure, AMO and / or procedural list, Primary procedure performed and Outcomes / complications.',
     source: 'Section 3.1.2 - Summary of procedure',
     keywords: ['summary of procedure', 'date of procedure', 'amo', 'procedural list', 'primary procedure', 'outcomes', 'complications', 'surgical', 'operation', 'performed']
   },
   {
     id: 'do_continued_care',
-    title: 'Continued Care Recommendations',
+    title: 'Continued care recommendations',
     displayOrder: 5,
-    standard: 'Continued care recommendations (only use points from 3.1.2): required post-operative precautions (safety warning signs), specific post-operative care instructions (e.g. medicine instructions), and planned follow-up/review arrangements.',
+    standard: 'Continued care recommendations includes: Post-operative precautions, Post-operative instructions e.g Medicine instructions and Follow up arrangements.',
     source: 'Section 3.1.2 - Continued care recommendations',
     keywords: ['continued care', 'precautions', 'post-operative instructions', 'medicine instructions', 'follow up', 'arrangements', 'post-op']
   }
@@ -416,7 +422,7 @@ const findMatchingRequirement = (
       'icu', 'hdu'
     ],
     allergies: [
-      'allergies', 'allergy', 'adverse reactions', 'intolerance', 'reaction type', 
+      'allergies', 'allergy', 'adverse reactions', 'adverse events', 'adverse effect', 'drug reaction', 'intolerance', 'reaction type', 
       'nil known allergies', 'allergy status'
     ],
     medicines_discharge: [
@@ -565,7 +571,136 @@ export default function App() {
   const [walkthroughIndex, setWalkthroughIndex] = useState(0);
   const [deletingPatientId, setDeletingPatientId] = useState<string | null>(null);
 
+  // New feedback loop states
+  const [feedbackRating, setFeedbackRating] = useState<'helpful' | 'unhelpful' | null>(null);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackLogs, setFeedbackLogs] = useState<any[]>([]);
+  const [showDeveloperLogs, setShowDeveloperLogs] = useState(false);
+  const [isDevMode, setIsDevMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('clinician_dev_mode') === 'true' || window.location.search.includes('dev=true');
+    } catch {
+      return false;
+    }
+  });
+
+  // Developer mode password states
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  // Clinician app feedback bubble states
+  const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
+  const [suggestionType, setSuggestionType] = useState<'suggestion' | 'bug' | 'general'>('suggestion');
+  const [suggestionText, setSuggestionText] = useState('');
+  const [suggestionEmail, setSuggestionEmail] = useState('');
+  const [suggestionSuccess, setSuggestionSuccess] = useState(false);
+
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
+
+  // Fetch feedback logs on load
+  const fetchFeedbackLogs = async () => {
+    try {
+      const res = await fetch('/api/feedback-logs');
+      if (res.ok) {
+        const data = await res.json();
+        setFeedbackLogs(data);
+      }
+    } catch (err) {
+      console.error("Failed to load clinical developer logs:", err);
+    }
+  };
+
+  const handleDeleteLog = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // prevent collapsing the accordion or accordion triggers
+    if (!window.confirm('Delete this response log?')) return;
+    try {
+      const res = await fetch(`/api/feedback-logs/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        showNotice('Response log deleted successfully.');
+        fetchFeedbackLogs();
+      } else {
+        showNotice('Failed to delete response log.');
+      }
+    } catch (err) {
+      console.error("Error deleting feedback log:", err);
+      showNotice('Error deleting response file.');
+    }
+  };
+
+  const handleClearAllLogs = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you absolutely sure you want to clear/delete all clinician response logs? This action is irreversible.')) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/feedback-logs/clear', {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        showNotice('All historical clinician feedback logs cleared.');
+        fetchFeedbackLogs();
+      } else {
+        showNotice('Failed to clear logs.');
+      }
+    } catch (err) {
+      console.error("Error clearing feedback logs:", err);
+      showNotice('Error resetting logs.');
+    }
+  };
+
+  const handleSendClinicalFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!suggestionText.trim()) return;
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: 'redacted',
+          patientName: 'Anonymous Patient',
+          type: 'clinician_app_feedback',
+          feedbackText: `[${suggestionType.toUpperCase()}] ${suggestionText.trim()}${suggestionEmail ? ` (Email: ${suggestionEmail})` : ''}`
+        })
+      });
+      if (res.ok) {
+        setSuggestionSuccess(true);
+        showNotice('Thank you! Your feedback has been logged.');
+        setSuggestionText('');
+        fetchFeedbackLogs();
+      }
+    } catch (err) {
+      console.error("Error submitting clinical feedback:", err);
+    }
+  };
+
+  const handleVerifyPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput.trim() === 'clinicaldev') {
+      setIsDevMode(true);
+      localStorage.setItem('clinician_dev_mode', 'true');
+      showNotice('Developer Loop Monitor is now Visible');
+      setIsPasswordModalOpen(false);
+      setPasswordError('');
+      setPasswordInput('');
+      setShowDeveloperLogs(true);
+      setTimeout(() => {
+        const el = document.getElementById('developer-feedback-monitor');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 150);
+    } else {
+      setPasswordError('Incorrect developer password. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    fetchFeedbackLogs();
+  }, []);
 
   // Initialize and sync showInputs when the selected patient changes
   useEffect(() => {
@@ -574,6 +709,9 @@ export default function App() {
       setIsEditingDemographics(false); // Reset profile editing state
       setIsWalkthroughActive(true);
       setWalkthroughIndex(0);
+      setFeedbackRating(null);
+      setFeedbackSuccess(false);
+      setFeedbackText('');
     }
   }, [selectedPatientId]);
 
@@ -589,6 +727,139 @@ export default function App() {
   useEffect(() => {
     setExpandedRequirementId(null);
   }, [selectedPatientId, selectedPatient?.missingInfoAnalysis]);
+
+  // Submit Quick Thumbs up/down Rating
+  const handleSubmitRating = async (rating: 'helpful' | 'unhelpful') => {
+    if (!selectedPatient) return;
+    setFeedbackRating(rating);
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: 'redacted',
+          patientName: 'Anonymous Patient',
+          type: 'rating',
+          rating: rating,
+          feedbackText: rating === 'helpful' 
+            ? 'Clinician rated this AI audit response as Helpful.' 
+            : 'Clinician rated this AI audit response as Unhelpful / Incorrect.'
+        })
+      });
+      if (res.ok) {
+        setFeedbackSuccess(true);
+        showNotice(`Rating (${rating}) logged to clinical developer feed.`);
+        fetchFeedbackLogs();
+      }
+    } catch (err) {
+      console.error("Error submitting rating:", err);
+    }
+  };
+
+  // Submit Detailed Clinician Notes manual feedback
+  const handleSendDetailedFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPatient || !feedbackText.trim()) return;
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: 'redacted',
+          patientName: 'Anonymous Patient',
+          type: 'manual_clinician_feedback',
+          feedbackText: feedbackText.trim()
+        })
+      });
+      if (res.ok) {
+        showNotice('Thank you! Detailed clinician feedback logged successfully.');
+        setFeedbackText('');
+        fetchFeedbackLogs();
+      }
+    } catch (err) {
+      console.error("Error submitting detailed feedback:", err);
+    }
+  };
+
+  // Heuristic comparison algorithm to evaluate prompt deviations (Heavily Edited check)
+  const calculateEditDiscrepancy = (originalText: string, modifiedText: string) => {
+    if (!originalText || !modifiedText) return { ratio: 0, heavy: false };
+    const origWords = originalText.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const modWords = modifiedText.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    
+    if (origWords.length === 0) return { ratio: 0, heavy: false };
+    
+    // Calculate word intersection
+    const modSet = new Set(modWords);
+    let commonCount = 0;
+    origWords.forEach(w => {
+      if (modSet.has(w)) {
+        commonCount++;
+      }
+    });
+    
+    const similarity = commonCount / Math.max(origWords.length, modWords.length);
+    const wordDifferenceRatio = 1 - similarity;
+    
+    const lengthDiff = Math.abs(originalText.length - modifiedText.length);
+    const lengthRatio = lengthDiff / Math.max(1, originalText.length);
+    
+    const deviationRatio = Math.max(wordDifferenceRatio, lengthRatio);
+    // > 20% deviation constitutes a heavy audit edit, which indicates a prompt failure log
+    return {
+      ratio: deviationRatio,
+      heavy: deviationRatio >= 0.20
+    };
+  };
+
+  // Clinician saves edits to consolidated summary draft - evaluates if edit is heavy
+  const handleSaveSummaryEdits = async () => {
+    if (!selectedPatient) return;
+    const original = selectedPatient.summary || '';
+    const modified = editedSummary;
+    
+    const { ratio, heavy } = calculateEditDiscrepancy(original, modified);
+    
+    // Auto-save changes locally first
+    const updatedPatient = {
+      ...selectedPatient,
+      summary: modified
+    };
+    updateSelectedPatient(updatedPatient);
+    setEditSummaryMode(false);
+    
+    try {
+      const payload = {
+        patientId: 'redacted',
+        patientName: 'Anonymous Patient',
+        type: heavy ? 'heavy_edit_failure' : 'clinician_edit_save',
+        feedbackText: heavy 
+          ? `PROMPT DISCREPANCY FAILURE: Case summary was heavily edited by clinical assessor (deviation: ${(ratio * 100).toFixed(1)}%).` 
+          : `Minor clinician modification saved (deviation: ${(ratio * 100).toFixed(1)}%).`,
+        originalText: '',
+        modifiedText: '',
+        discrepancyRatio: ratio
+      };
+      
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) {
+        if (heavy) {
+          showNotice(`⚠️ Prompt Failure Logged: Heavy edits detected (${(ratio*100).toFixed(0)}% diff). Logs sent to clinical developers.`);
+        } else {
+          showNotice(`Summary draft saved successfully.`);
+        }
+        fetchFeedbackLogs();
+      }
+    } catch (err) {
+      console.error("Error writing clinician verification edits:", err);
+      showNotice(`Summary saved locally.`);
+    }
+  };
 
   // Auto-detect patient details when raw content changes, but only if name is 'New Profile'
   useEffect(() => {
@@ -629,7 +900,9 @@ export default function App() {
         cleanLine.startsWith('###') || 
         (cleanLine.startsWith('**') && (cleanLine.endsWith('**') || cleanLine.endsWith('**:'))) ||
         (cleanLine.startsWith('- **') && (cleanLine.endsWith('**') || cleanLine.endsWith('**:'))) ||
-        (cleanLine.startsWith('* **') && (cleanLine.endsWith('**') || cleanLine.endsWith('**:')))
+        (cleanLine.startsWith('* **') && (cleanLine.endsWith('**') || cleanLine.endsWith('**:'))) ||
+        /^\d+\.\s/.test(cleanLine) ||
+        DAY_ONLY_REQUIREMENTS.some(req => cleanLine.toLowerCase().includes(req.title.toLowerCase()))
       ) {
         currentCategory = cleanLine
           .replace(/^###\s*/, '')
@@ -637,6 +910,7 @@ export default function App() {
           .replace(/^\*\*/, '')
           .replace(/\*\*:?$/, '')
           .replace(/^[-*]\s*/, '')
+          .replace(/^\d+\.\s*/, '')
           .trim();
         continue;
       }
@@ -647,21 +921,28 @@ export default function App() {
          continue;
       } else if (cleanLine.startsWith('-') || cleanLine.startsWith('*')) {
         const textContent = cleanLine.replace(/^[-*]\s*/, '').trim();
-        if (textContent) {
+        const textLower = textContent.toLowerCase();
+        if (textContent && !textLower.includes('no omission') && !textLower.includes('none missing') && !textLower.includes('not missing') && !textLower.includes('no missing')) {
           bubbles.push({
             category: currentCategory,
             content: textContent,
           });
         }
       } else if (cleanLine.length > 8 && !cleanLine.startsWith('<') && !cleanLine.startsWith('###')) {
-        bubbles.push({
-          category: currentCategory,
-          content: cleanLine,
-        });
+        const lineLower = cleanLine.toLowerCase();
+        if (!lineLower.includes('no omission') && !lineLower.includes('none missing') && !lineLower.includes('not missing') && !lineLower.includes('no missing')) {
+          bubbles.push({
+            category: currentCategory,
+            content: cleanLine,
+          });
+        }
       }
     }
     
     if (bubbles.length === 0) {
+      if (markdownText.toLowerCase().includes('no omission') || markdownText.toLowerCase().includes('none missing')) {
+        return [];
+      }
       return [{ category: 'Audit Attention', content: markdownText }];
     }
     
@@ -1285,7 +1566,22 @@ export default function App() {
 
               {/* STEP 2: REFERRAL LETTER GAP & SAFETY CHECK */}
               {showInputs && (() => {
-                const isSpecialConsideration = !!(selectedPatient?.isDayOnly || selectedPatient?.isVulnerable || selectedPatient?.isCorrectional || selectedPatient?.isMentalHealthDischargeNonMH || selectedPatient?.hasAdditionalMedicines || selectedPatient?.isOutOfScope || selectedPatient?.isWellBabyObstetric);
+                const isGuidelineBlocked = !!(
+                  selectedPatient?.isMentalHealthInpatient ||
+                  selectedPatient?.isEmergencyDepartment ||
+                  selectedPatient?.isOutpatientClinic ||
+                  selectedPatient?.isWellBabyObstetric
+                );
+
+                const isSpecialConsideration = !!(
+                  selectedPatient?.isDayOnly ||
+                  selectedPatient?.isVulnerable ||
+                  selectedPatient?.isCorrectional ||
+                  selectedPatient?.isMentalHealthDischargeNonMH ||
+                  selectedPatient?.hasAdditionalMedicines ||
+                  selectedPatient?.isOutOfScope ||
+                  isGuidelineBlocked
+                );
 
                 return (
                   <div className="space-y-6">
@@ -1311,36 +1607,94 @@ export default function App() {
                         {/* Guided action instructions based on active special cohorts */}
                         <div className="bg-white/95 border border-amber-150 rounded-lg p-4 space-y-3">
                           <div className="space-y-4 divide-y divide-amber-100/50">
-                            {selectedPatient.isOutOfScope && (
-                              <div className="space-y-1 text-xs pt-0">
-                                <span className="inline-block text-[9px] font-extrabold text-rose-750 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded uppercase font-mono mb-1 mt-2">
-                                  GL2022_005 Scope Exclusion
+                            {selectedPatient.isMentalHealthInpatient && (
+                              <div className="space-y-1.5 text-xs pt-4 first:pt-0">
+                                <span className="inline-block text-[9px] font-extrabold text-rose-750 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded uppercase font-mono mb-1">
+                                  GL2022_005 Exclusion - Mental Health Inpatient Unit
                                 </span>
-                                <div className="text-slate-800 font-medium pb-1.5 space-y-2">
-                                  <p>This Guideline applies to all admitted patients being discharged from a NSW public hospital, with the exception of:</p>
-                                  <ul className="list-disc pl-5 space-y-1">
-                                    <li>Patients being discharged from a mental health inpatient unit. For these patients, please refer to NSW Health Policy Directive Discharge Planning and Transfer of Care for Consumers of NSW Health Mental Health Services (PD2019_045)</li>
-                                    <li>Patients discharged home from an emergency department. For these patients, please refer to NSW Health Policy Directive Departure of Emergency Department patients (PD2014_025)</li>
-                                    <li>Patients attending outpatient clinic appointments</li>
-                                  </ul>
-                                  <p>Patients who discharge against medical advice are included in the scope of this Guideline as defined by NSW Health Policy Directive NSW Health Admission Policy (PD2017_015). At a minimum provide a completed discharge summary as outlined in this Guideline to ensure safe continuation of care for the patient in the future. If a patient leaves the hospital prior to receiving the discharge summary, a copy must be sent to the nominated general practitioner.</p>
-                                  <p>This Guideline does not cover an exhaustive list of situations and there may be special circumstances that are beyond its cover. For those scenarios, please consider where the Guideline is applicable, and ensure appropriate clinical judgement and optimal transition of care is provided to the patient.</p>
-                                </div>
+                                <p className="text-slate-800 font-semibold leading-relaxed">
+                                  For these patients, please refer to NSW Health Policy Directive <strong>Discharge Planning and Transfer of Care for Consumers of NSW Health Mental Health Services</strong>. Compliance review cannot continue.
+                                </p>
+                                <p className="text-rose-900 bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded font-bold text-[11px] flex items-center justify-between">
+                                  <span>Policy Reference: PD2019_045</span>
+                                  <a 
+                                    href="https://www1.health.nsw.gov.au/pds/Pages/doc.aspx?dn=PD2019_045"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-rose-750 hover:text-rose-850 underline flex items-center gap-1"
+                                  >
+                                    <span>Open PD2019_045 Link</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                </p>
+                              </div>
+                            )}
+
+                            {selectedPatient.isEmergencyDepartment && (
+                              <div className="space-y-1.5 text-xs pt-4 first:pt-0">
+                                <span className="inline-block text-[9px] font-extrabold text-rose-750 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded uppercase font-mono mb-1">
+                                  GL2022_005 Exclusion - Emergency Department
+                                </span>
+                                <p className="text-slate-800 font-semibold leading-relaxed">
+                                  For these patients, please refer to NSW Health Policy Directive <strong>Departure of Emergency Department patients</strong>. Compliance review cannot continue.
+                                </p>
+                                <p className="text-rose-900 bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded font-bold text-[11px] flex items-center justify-between">
+                                  <span>Policy Reference: PD2014_025</span>
+                                  <a 
+                                    href="https://www1.health.nsw.gov.au/pds/Pages/doc.aspx?dn=PD2014_025"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-rose-750 hover:text-rose-850 underline flex items-center gap-1"
+                                  >
+                                    <span>Open PD2014_025 Link</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                </p>
+                              </div>
+                            )}
+
+                            {selectedPatient.isOutpatientClinic && (
+                              <div className="space-y-1.5 text-xs pt-4 first:pt-0">
+                                <span className="inline-block text-[9px] font-extrabold text-rose-750 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded uppercase font-mono mb-1">
+                                  GL2022_005 Exclusion - Outpatient Clinic Appointment
+                                </span>
+                                <p className="text-slate-800 font-bold leading-relaxed bg-rose-50/50 p-2.5 rounded border border-rose-150">
+                                  A discharge letter is <strong>Non applicable</strong> in this case. No clinical letter gaps audit can run.
+                                </p>
                               </div>
                             )}
 
                             {selectedPatient.isWellBabyObstetric && (
-                              <div className="space-y-1 text-xs pt-4 first:pt-0">
-                                <span className="inline-block text-[9px] font-extrabold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase font-mono mb-1">
-                                  GL2022_005 Exception - Maternity & Well-Baby
+                              <div className="space-y-1.5 text-xs pt-4 first:pt-0">
+                                <span className="inline-block text-[9px] font-extrabold text-rose-750 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded uppercase font-mono mb-1">
+                                  GL2022_005 Exclusion - Well Mothers & Babies
                                 </span>
-                                <p className="text-slate-800 font-medium pb-1.5">
-                                  For well mothers and babies, discharge can be initiated and coordinated by midwifery staff as per local Postnatal Clinical Pathways. Discharge summaries must be complemented by the My Personal Health Record and provided to the mother.
+                                <p className="text-slate-800 font-semibold leading-relaxed">
+                                  Discharge can be initiated and coordinated by midwifery staff as per local Postnatal Clinical Pathways, and under the framework of the <strong>National Midwifery Guidelines for Consultation and Referral</strong>. Compliance review cannot continue.
                                 </p>
-                                <p className="text-amber-800 font-bold bg-amber-50/50 px-2 py-1.5 rounded border border-amber-100 flex items-center gap-1.5 text-[11px]">
-                                  <AlertCircle className="w-4 h-4 shrink-0" />
-                                  <span>Redirect to: National Maternity Record Standard & Local midwifery/perinatal clinical records.</span>
+                                <p className="text-rose-900 bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded font-bold text-[11px] flex items-center justify-between">
+                                  <span>ACM National Midwifery Guidelines</span>
+                                  <a 
+                                    href="https://midwives.org.au/common/Uploaded%20files/_ADMIN-ACM/National-Midwifery-Guidelines-for-Consultation-and-Referral-4th-Edition-(2021).pdf"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-rose-750 hover:text-rose-850 underline flex items-center gap-1"
+                                  >
+                                    <span>Open Guidelines PDF Link</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
                                 </p>
+                              </div>
+                            )}
+
+                            {selectedPatient.isOutOfScope && (
+                              <div className="space-y-1 text-xs pt-4 first:pt-0">
+                                <span className="inline-block text-[9px] font-extrabold text-rose-750 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded uppercase font-mono mb-1">
+                                  GL2022_005 Scope Exclusion Notice
+                                </span>
+                                <div className="text-slate-800 font-medium pb-1.5 space-y-2">
+                                  <p>This Guideline applies to all admitted patients being discharged from a NSW public hospital, with standard exceptions including mental health admissions, ED departures, outpatient appointments, and midwifery births.</p>
+                                </div>
                               </div>
                             )}
 
@@ -1460,67 +1814,164 @@ export default function App() {
                       </div>
                     )}
 
-                    <div className="bg-linear-to-br from-slate-50 to-slate-100/55 border border-slate-200/80 rounded-xl p-8 lg:p-10 shadow-3xs flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in duration-300">
-                      <div className="w-14 h-14 bg-emerald-50 border border-emerald-100/50 rounded-full flex items-center justify-center text-emerald-600 shadow-3xs shrink-0">
-                        <Sparkles className="w-7 h-7" />
-                      </div>
+                    {isGuidelineBlocked ? (
+                      <div className="bg-rose-50/45 border-2 border-rose-300 rounded-xl p-8 lg:p-10 shadow-3xs flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in duration-300">
+                        <div className="w-14 h-14 bg-rose-100 border border-rose-200/50 rounded-full flex items-center justify-center text-rose-700 shadow-xs shrink-0 animate-pulse">
+                          <ShieldAlert className="w-7 h-7" />
+                        </div>
 
-                      <div className="space-y-1.5 max-w-xl">
-                        <h3 className="text-base font-bold text-slate-900">Run Guidelines Compliance Audit</h3>
-                        <p className="text-xs text-slate-505 leading-relaxed font-semibold">
-                          Analyze patient entries, manual files, and written referral letters against NSW Health <strong>GL2022_005</strong> guidelines. This clinical safety check automatically scans for required parameters and missing medications data.
-                        </p>
-                      </div>
+                        <div className="space-y-3 max-w-2xl">
+                          <h3 className="text-base font-extrabold text-rose-950 uppercase tracking-widest">
+                            Audit Disabled — Out of Scope Exception Detected
+                          </h3>
+                          <p className="text-xs text-slate-505 font-medium max-w-lg mx-auto leading-relaxed">
+                            The NSW Health GL2022_005 auditing engine cannot run for this cohort. Please process this patient using the specific clinical standards outlined below.
+                          </p>
 
-                      {isConsolidating ? (
-                        <div className="w-full max-w-md space-y-4">
-                          <div className="bg-white border border-slate-150 rounded-lg p-3.5 shadow-3xs">
-                            <span className="block text-[10px] font-extrabold text-amber-650 font-mono tracking-wider uppercase mb-1">
-                              Live LLM Audit Engine
-                            </span>
-                            <span className="text-xs font-semibold text-slate-700 min-h-[1.5rem] flex items-center justify-center animate-pulse transition-all duration-200">
-                              {auditStatusText || 'Initializing engine...'}
-                            </span>
-                          </div>
+                          <div className="text-slate-800 text-xs leading-relaxed font-semibold space-y-3.5 text-left bg-white border border-rose-150 p-5 rounded-lg shadow-3xs mt-4">
+                            {selectedPatient.isMentalHealthInpatient && (
+                              <div className="space-y-1.5">
+                                <span className="inline-block text-[9px] font-mono font-bold text-rose-750 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded uppercase">
+                                  Mental Health Excluded
+                                </span>
+                                <p className="text-[11.5px] text-slate-705">
+                                  For these patients, please refer to NSW Health Policy Directive <strong>Discharge Planning and Transfer of Care for Consumers of NSW Health Mental Health Services</strong>.
+                                </p>
+                                <a 
+                                  href="https://www1.health.nsw.gov.au/pds/Pages/doc.aspx?dn=PD2019_045"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-rose-750 hover:text-rose-850 font-bold hover:underline py-0.5 mt-0.5"
+                                >
+                                  <span>Open Policy Directive PD2019_045</span>
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            )}
 
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center text-[10px] font-extrabold text-slate-450 font-mono">
-                              <span>AUDITING PARAMS</span>
-                              <span className="text-amber-600 bg-amber-50 border border-amber-200/50 px-1.5 py-0.5 rounded font-bold">
-                                {auditProgress}%
-                              </span>
-                            </div>
-                            <div className="w-full bg-slate-250 h-3 rounded-full overflow-hidden shadow-inner relative">
-                              <div 
-                                className="bg-gradient-to-r from-amber-500 via-amber-600 to-emerald-600 h-full rounded-full transition-all duration-300 ease-out" 
-                                style={{ width: `${auditProgress}%` }}
-                              />
-                            </div>
+                            {selectedPatient.isEmergencyDepartment && (
+                              <div className="space-y-1.5 pt-3.5 border-t border-rose-100/50 first:pt-0 first:border-t-0">
+                                <span className="inline-block text-[9px] font-mono font-bold text-rose-750 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded uppercase">
+                                  Emergency Department Excluded
+                                </span>
+                                <p className="text-[11.5px] text-slate-705">
+                                  For emergency department patient departures, please refer to NSW Health Policy Directive <strong>Departure of Emergency Department patients</strong>.
+                                </p>
+                                <a 
+                                  href="https://www1.health.nsw.gov.au/pds/Pages/doc.aspx?dn=PD2014_025"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-rose-750 hover:text-rose-850 font-bold hover:underline py-0.5 mt-0.5"
+                                >
+                                  <span>Open Policy Directive PD2014_025</span>
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            )}
+
+                            {selectedPatient.isOutpatientClinic && (
+                              <div className="space-y-1.5 pt-3.5 border-t border-rose-100/50 first:pt-0 first:border-t-0">
+                                <span className="inline-block text-[9px] font-mono font-bold text-rose-750 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded uppercase">
+                                  Outpatient attendees
+                                </span>
+                                <p className="text-[11.5px] text-slate-705">
+                                  A discharge letter is <strong>Non applicable</strong> in this case as standard discharge protocol GL2022_005 is non-applicable for outpatient clinic appointments.
+                                </p>
+                              </div>
+                            )}
+
+                            {selectedPatient.isWellBabyObstetric && (
+                              <div className="space-y-1.5 pt-3.5 border-t border-rose-100/50 first:pt-0 first:border-t-0">
+                                <span className="inline-block text-[9px] font-mono font-bold text-rose-750 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded uppercase">
+                                  Well Mothers & Babies Excluded
+                                </span>
+                                <p className="text-[11.5px] text-slate-705">
+                                  Discharge can be initiated and coordinated by midwifery staff as per local Postnatal Clinical Pathways, and under the framework of the <strong>National Midwifery Guidelines for Consultation and Referral</strong>.
+                                </p>
+                                <a 
+                                  href="https://midwives.org.au/common/Uploaded%20files/_ADMIN-ACM/National-Midwifery-Guidelines-for-Consultation-and-Referral-4th-Edition-(2021).pdf"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-rose-750 hover:text-rose-850 font-bold hover:underline py-0.5 mt-0.5"
+                                >
+                                  <span>Open National Midwifery Guidelines (4th Edition, 2021)</span>
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => triggerConsolidate()}
-                          disabled={
-                            (!selectedPatient.manualNotes && !selectedPatient.cleanedMarkdown) ||
-                            (selectedPatient.uploadedDocName && !selectedPatient.aiInterpretationVerified)
-                          }
-                          className="w-full max-w-md h-12.5 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:from-slate-205 disabled:to-slate-205 disabled:text-slate-400 text-white rounded-xl text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all shadow-md hover:shadow-lg disabled:cursor-not-allowed cursor-pointer select-none border-t border-emerald-500/10"
-                        >
-                          <Sparkles className="w-5 h-5 shrink-0 text-emerald-100" />
-                          <span>Check Referral Letter Gaps</span>
-                        </button>
-                      )}
 
-                      {selectedPatient.uploadedDocName && !selectedPatient.aiInterpretationVerified && (
-                        <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-3.5 text-xs text-amber-900 flex items-start gap-2.5 max-w-md text-left animate-in fade-in duration-200">
-                          <AlertTriangle className="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" />
+                        <div className="w-full max-w-md bg-rose-100/30 border border-rose-200 rounded-lg p-3 text-xs text-rose-850 flex items-start gap-2 max-w-xl text-left">
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                           <span>
-                            <strong>Audit Locked:</strong> Please review, verify AI document extraction, and sign the discharge letter block in the clinical workspace above to unlock this safety check.
+                            <strong>Process Stopped:</strong> The compliance program does not continue for this cohort. A clinical letter safety audit is not possible for out-of-scope exemptions.
                           </span>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="bg-linear-to-br from-slate-50 to-slate-100/55 border border-slate-200/80 rounded-xl p-8 lg:p-10 shadow-3xs flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in duration-300">
+                        <div className="w-14 h-14 bg-emerald-50 border border-emerald-100/50 rounded-full flex items-center justify-center text-emerald-600 shadow-3xs shrink-0">
+                          <Sparkles className="w-7 h-7" />
+                        </div>
+
+                        <div className="space-y-1.5 max-w-xl">
+                          <h3 className="text-base font-bold text-slate-900">Run Guidelines Compliance Audit</h3>
+                          <p className="text-xs text-slate-505 leading-relaxed font-semibold">
+                            Analyze patient entries, manual files, and written referral letters against NSW Health <strong>GL2022_005</strong> guidelines. This clinical safety check automatically scans for required parameters and missing medications data.
+                          </p>
+                        </div>
+
+                        {isConsolidating ? (
+                          <div className="w-full max-w-md space-y-4">
+                            <div className="bg-white border border-slate-150 rounded-lg p-3.5 shadow-3xs">
+                              <span className="block text-[10px] font-extrabold text-amber-650 font-mono tracking-wider uppercase mb-1">
+                                Live LLM Audit Engine
+                              </span>
+                              <span className="text-xs font-semibold text-slate-700 min-h-[1.5rem] flex items-center justify-center animate-pulse transition-all duration-200">
+                                {auditStatusText || 'Initializing engine...'}
+                              </span>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center text-[10px] font-extrabold text-slate-450 font-mono">
+                                <span>AUDITING PARAMS</span>
+                                <span className="text-amber-600 bg-amber-50 border border-amber-200/50 px-1.5 py-0.5 rounded font-bold">
+                                  {auditProgress}%
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-250 h-3 rounded-full overflow-hidden shadow-inner relative">
+                                <div 
+                                  className="bg-gradient-to-r from-amber-500 via-amber-600 to-emerald-600 h-full rounded-full transition-all duration-300 ease-out" 
+                                  style={{ width: `${auditProgress}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => triggerConsolidate()}
+                            disabled={
+                              (!selectedPatient.manualNotes && !selectedPatient.cleanedMarkdown) ||
+                              (selectedPatient.uploadedDocName && !selectedPatient.aiInterpretationVerified)
+                            }
+                            className="w-full max-w-md h-12.5 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:from-slate-205 disabled:to-slate-205 disabled:text-slate-400 text-white rounded-xl text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all shadow-md hover:shadow-lg disabled:cursor-not-allowed cursor-pointer select-none border-t border-emerald-500/10"
+                          >
+                            <Sparkles className="w-5 h-5 shrink-0 text-emerald-100" />
+                            <span>Check Referral Letter Gaps</span>
+                          </button>
+                        )}
+
+                        {selectedPatient.uploadedDocName && !selectedPatient.aiInterpretationVerified && (
+                          <div className="bg-amber-50/50 border border-amber-200 rounded-lg p-3.5 text-xs text-amber-900 flex items-start gap-2.5 max-w-md text-left animate-in fade-in duration-200">
+                            <AlertTriangle className="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" />
+                            <span>
+                              <strong>Audit Locked:</strong> Please review, verify AI document extraction, and sign the discharge letter block in the clinical workspace above to unlock this safety check.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
@@ -1599,20 +2050,85 @@ export default function App() {
                           };
                         });
                         const totalGapsCount = bubbles.length;
+                        
+                        let reqsWithGaps = isDayOnly 
+                          ? [...reqsGapsList] 
+                          : reqsGapsList.filter((req) => req.gaps.length > 0);
+                        
+                        if (!isDayOnly && selectedPatient.isVulnerable) {
+                          const alreadyExists = reqsWithGaps.some(r => r.id === 'vulnerable_cohorts');
+                          if (!alreadyExists) {
+                            const vulReq = reqsGapsList.find(r => r.id === 'vulnerable_cohorts');
+                            if (vulReq) {
+                              reqsWithGaps.push({
+                                ...vulReq,
+                                gaps: vulReq.gaps.length > 0 ? vulReq.gaps : [{
+                                  category: 'vulnerable_cohorts',
+                                  content: 'NSW Health Section 2.1.1 Vulnerable Cohort Safety Standard Checklist Verification'
+                                }]
+                              });
+                            }
+                          } else {
+                            const idx = reqsWithGaps.findIndex(r => r.id === 'vulnerable_cohorts');
+                            if (idx > -1) {
+                              const [vulReq] = reqsWithGaps.splice(idx, 1);
+                              reqsWithGaps.push(vulReq);
+                            }
+                          }
+                        }
+
+                        const totalStepsCount = reqsWithGaps.length;
+                        const isWalkthrough = isWalkthroughActive;
 
                         return (
                           <div className="bg-white border border-slate-200/95 rounded-xl p-6 shadow-xs flex flex-col justify-between animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <div>
 
+                              {/* Simplified Header with Real-Time AI Rating Widget */}
+                              <div className="flex border-b border-slate-150 mb-5 justify-between items-center pb-3 select-none">
+                                <div className="flex items-center gap-2">
+                                  <span className="p-1 rounded-md bg-emerald-50 text-emerald-700">
+                                    <ShieldCheck className="w-4 h-4" />
+                                  </span>
+                                  <div>
+                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                      Safety Compliance Gaps Audit
+                                    </h3>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">
+                                      {totalGapsCount === 0 ? "All documentation safety checkpoints met." : `${totalGapsCount} potential compliance items detected.`}
+                                    </p>
+                                  </div>
+                                </div>
 
-                              {/* TAB 1: SAFETY CHECKLIST & MINIMUM REQUIREMENTS */}
-                              {auditTab === 'safeties' && (() => {
-                                const reqsWithGaps = reqsGapsList.filter((req) => req.gaps.length > 0);
-                                const totalStepsCount = reqsWithGaps.length;
-                                const isWalkthrough = isWalkthroughActive;
+                                {/* Thumbs Up / Thumbs Down Rating widget */}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider hidden sm:inline">Rate Audit Accuracy:</span>
+                                  <div className="flex items-center gap-1 bg-slate-50 border border-slate-200/60 p-0.5 rounded-lg shadow-3xs">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSubmitRating('helpful')}
+                                      title="Thumbs Up - Helpful and Accurate"
+                                      className={`p-1.5 rounded-md hover:bg-slate-200 transition-colors flex items-center justify-center cursor-pointer ${
+                                        feedbackRating === 'helpful' ? 'bg-emerald-100 text-emerald-700' : 'text-slate-400 hover:text-slate-750'
+                                      }`}
+                                    >
+                                      <ThumbsUp className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSubmitRating('unhelpful')}
+                                      title="Thumbs Down - Missing/Incorrect findings"
+                                      className={`p-1.5 rounded-md hover:bg-slate-200 transition-colors flex items-center justify-center cursor-pointer ${
+                                        feedbackRating === 'unhelpful' ? 'bg-rose-100 text-rose-700' : 'text-slate-400 hover:text-slate-755'
+                                      }`}
+                                    >
+                                      <ThumbsDown className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
 
-                                return (
-                                  <div className="space-y-4 font-sans text-left">
+                              <div className="space-y-4 font-sans text-left">
                                     
 
 
@@ -1625,21 +2141,18 @@ export default function App() {
                                         if (!req) return null;
 
                                         // Determine if there are cohort-specific exceptions active for this step
-                                        const isCorrectionalFollowup = selectedPatient.isCorrectional && req.id === 'followup_appointments';
-                                        const isCorrectionChecked = !!selectedPatient.isFollowUpSecureHandoverChecked;
+                                        const isCorrectionalFollowup = selectedPatient.isCorrectional && req.id === 'correctional_mandate';
                                         
                                         // Is vulnerable cohorts step?
                                         const isVulnerableCohortStep = selectedPatient.isVulnerable && req.id === 'vulnerable_cohorts';
+                                        
+                                        const isSpecialMandate = ['correctional_mandate', 'vulnerable_cohorts', 'mental_health_collaboration', 'additional_medicine_instructions'].includes(req.id);
 
                                         return (
                                           <div className={`bg-white border-2 rounded-xl p-5 shadow-3xs animate-in fade-in slide-in-from-bottom-1 duration-200 flex flex-col min-h-[460px] transition-all duration-300 ${
-                                            isCorrectionalFollowup && isCorrectionChecked
-                                              ? 'border-emerald-300 bg-emerald-50/5 shadow-emerald-50/10'
-                                              : isCorrectionalFollowup
+                                            isSpecialMandate
                                                 ? 'border-amber-300 bg-amber-50/5'
-                                                : isVulnerableCohortStep
-                                                  ? 'border-rose-200 bg-rose-50/5'
-                                                  : 'border-red-100'
+                                                : 'border-red-100'
                                           }`}>
                                             
                                             {/* Step Header */}
@@ -1647,17 +2160,13 @@ export default function App() {
                                               <div>
                                                 <div className="flex items-center gap-2">
                                                   <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider ${
-                                                    isCorrectionalFollowup && isCorrectionChecked
-                                                      ? 'text-emerald-700 bg-emerald-100 border border-emerald-250/30 font-mono'
-                                                      : isCorrectionalFollowup
+                                                    isSpecialMandate
                                                         ? 'text-amber-750 bg-amber-50 border border-amber-250/30 font-mono'
                                                         : 'text-red-700 bg-red-100/70 border border-red-250/30'
                                                   }`}>
-                                                    {isCorrectionalFollowup && isCorrectionChecked
-                                                      ? `Audit Step ${currentStepIndex + 1} of ${totalStepsCount} — Security Reconciled`
-                                                      : isCorrectionalFollowup
-                                                        ? `Audit Step ${currentStepIndex + 1} of ${totalStepsCount} — Correctional Exemption`
-                                                        : `Audit Step ${currentStepIndex + 1} of ${totalStepsCount} — Clinical Gap`
+                                                    {isSpecialMandate
+                                                          ? `WARNING`
+                                                          : `Audit Step ${currentStepIndex + 1} of ${totalStepsCount} — Clinical Gap`
                                                     }
                                                   </span>
                                                 </div>
@@ -1680,12 +2189,10 @@ export default function App() {
                                                       onClick={() => setWalkthroughIndex(idx)}
                                                       className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
                                                         isCurrent
-                                                          ? isCorrectionalFollowup && isCorrectionChecked
-                                                            ? 'bg-emerald-500 scale-120'
-                                                            : isCorrectionalFollowup
+                                                          ? isSpecialMandate
                                                               ? 'bg-amber-500 scale-120'
                                                               : 'bg-rose-500 scale-120'
-                                                          : 'bg-red-100 hover:bg-red-200'
+                                                          : 'bg-slate-200 hover:bg-slate-300'
                                                       }`}
                                                       title={`Go to gap section ${idx + 1}`}
                                                     />
@@ -1699,7 +2206,7 @@ export default function App() {
                                               
                                               {/* Cohort-Specific Special Adaptive Views */}
                                               {isCorrectionalFollowup && (
-                                                <div className="p-3.5 rounded-xl border border-amber-200bg-amber-50/20 text-slate-850 space-y-3">
+                                                <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/20 text-slate-850 space-y-3">
                                                   <div className="flex items-center gap-2">
                                                     <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
                                                     <strong className="text-xs font-bold uppercase tracking-wider text-amber-900">
@@ -1709,37 +2216,6 @@ export default function App() {
                                                   <p className="text-xs leading-relaxed text-slate-700 font-medium">
                                                     Escorted justice-health patients must <strong>never</strong> be given specific outpatient follow-up booking times or hospital dates directly in their clinical letters, as this constitutes a major flight risk and safety hazard.
                                                   </p>
-                                                  
-                                                  <div className="border border-slate-200/90 rounded-lg p-3 bg-white space-y-2.5 shadow-3xs">
-                                                    <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">
-                                                      Security Handover Verification Checklist
-                                                    </span>
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => {
-                                                        updateSelectedPatient({
-                                                          ...selectedPatient,
-                                                          isFollowUpSecureHandoverChecked: !isCorrectionChecked
-                                                        });
-                                                      }}
-                                                      className={`w-full flex items-start gap-2.5 p-2 rounded text-left border cursor-pointer transition-all ${
-                                                        isCorrectionChecked
-                                                          ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900'
-                                                          : 'bg-slate-50/50 hover:bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-800'
-                                                      }`}
-                                                    >
-                                                      <div className="mt-0.5 shrink-0">
-                                                        {isCorrectionChecked ? (
-                                                          <CheckSquare className="w-4 h-4 text-emerald-600" />
-                                                        ) : (
-                                                          <Square className="w-4 h-4 text-slate-400" />
-                                                        )}
-                                                      </div>
-                                                      <div className="text-[11px] font-semibold leading-relaxed">
-                                                        <span>I certify that standard bookings are redacted in the patient summary, and all schedules are sealed in a <strong>"Confidential" envelope</strong> for direct physical delivery to the Escort Officer.</span>
-                                                      </div>
-                                                    </button>
-                                                  </div>
                                                 </div>
                                               )}
 
@@ -1748,79 +2224,20 @@ export default function App() {
                                                   <div className="flex items-center gap-2">
                                                     <ShieldAlert className="w-5 h-5 text-rose-700 shrink-0" />
                                                     <strong className="text-xs font-bold uppercase tracking-wider text-rose-800">
-                                                      Vulnerable Patient Checklist Assistant
+                                                      Vulnerable Patient Protocol Assistant
                                                     </strong>
                                                   </div>
                                                   <p className="text-xs leading-relaxed text-slate-700 font-medium">
-                                                    For vulnerable patients, standard templates require four key elements. Use the pre-filled dementia/delirium protocol below or edit details to insert directly into your letter draft:
+                                                    For vulnerable patients, standard templates require four key elements. You can use the standard dementia/delirium protocol below to insert directly into your letter draft:
                                                   </p>
-
-                                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                                                    <div className="space-y-1">
-                                                      <label className="text-[9.5px] font-bold uppercase text-slate-505">1. Early warning signs:</label>
-                                                      <input
-                                                        type="text"
-                                                        value={selectedPatient.vulnerableWarningSigns || 'Pacing, increased confusion, altered sleep cycles, refusal of meals.'}
-                                                        onChange={(e) => {
-                                                          updateSelectedPatient({
-                                                            ...selectedPatient,
-                                                            vulnerableWarningSigns: e.target.value
-                                                          });
-                                                        }}
-                                                        className="w-full p-2 border border-slate-200 rounded text-[11px] font-mono font-medium focus:outline-hidden focus:ring-1 focus:ring-rose-500 bg-white"
-                                                      />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                      <label className="text-[9.5px] font-bold uppercase text-slate-505">2. Risk mitigation:</label>
-                                                      <input
-                                                        type="text"
-                                                        value={selectedPatient.vulnerableMitigation || 'High falls hazard (wrist cast present). Keep walkways clear, non-slip socks, low-line bed.'}
-                                                        onChange={(e) => {
-                                                          updateSelectedPatient({
-                                                            ...selectedPatient,
-                                                            vulnerableMitigation: e.target.value
-                                                          });
-                                                        }}
-                                                        className="w-full p-2 border border-slate-200 rounded text-[11px] font-mono font-medium focus:outline-hidden focus:ring-1 focus:ring-rose-500 bg-white"
-                                                      />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                      <label className="text-[9.5px] font-bold uppercase text-slate-505">3. Contingency plans:</label>
-                                                      <input
-                                                        type="text"
-                                                        value={selectedPatient.vulnerableContingency || 'Call Dementia Support Hotlines or present directly to closest LHD ED if severely distressed.'}
-                                                        onChange={(e) => {
-                                                          updateSelectedPatient({
-                                                            ...selectedPatient,
-                                                            vulnerableContingency: e.target.value
-                                                          });
-                                                        }}
-                                                        className="w-full p-2 border border-slate-200 rounded text-[11px] font-mono font-medium focus:outline-hidden focus:ring-1 focus:ring-rose-500 bg-white"
-                                                      />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                      <label className="text-[9.5px] font-bold uppercase text-slate-505">4. Emergency contacts:</label>
-                                                      <input
-                                                        type="text"
-                                                        value={selectedPatient.vulnerableContacts || 'Dementia Care Support LHD Unit: Ph 02 9382 1111 (24/7 Service)'}
-                                                        onChange={(e) => {
-                                                          updateSelectedPatient({
-                                                            ...selectedPatient,
-                                                            vulnerableContacts: e.target.value
-                                                          });
-                                                        }}
-                                                        className="w-full p-2 border border-slate-200 rounded text-[11px] font-mono font-medium focus:outline-hidden focus:ring-1 focus:ring-rose-500 bg-white"
-                                                      />
-                                                    </div>
-                                                  </div>
 
                                                   <button
                                                     type="button"
                                                     onClick={() => {
-                                                      const ews = selectedPatient.vulnerableWarningSigns || 'Pacing, increased confusion, altered sleep cycles, refusal of meals.';
-                                                      const rm = selectedPatient.vulnerableMitigation || 'High falls hazard (wrist cast present). Keep walkways clear, non-slip socks, low-line bed.';
-                                                      const cp = selectedPatient.vulnerableContingency || 'Call Dementia Support Hotlines or present directly to closest LHD ED if severely distressed.';
-                                                      const ec = selectedPatient.vulnerableContacts || 'Dementia Care Support LHD Unit: Ph 02 9382 1111 (24/7 Service)';
+                                                      const ews = 'Pacing, increased confusion, altered sleep cycles, refusal of meals.';
+                                                      const rm = 'High falls hazard (wrist cast present). Keep walkways clear, non-slip socks, low-line bed.';
+                                                      const cp = 'Call Dementia Support Hotlines or present directly to closest LHD ED if severely distressed.';
+                                                      const ec = 'Dementia Care Support LHD Unit: Ph 02 9382 1111 (24/7 Service)';
 
                                                       const appendixText = `\n\n### Vulnerable Cohorts (Sec 2.1.1) Safety Protocols
 - **Early warning signs**: ${ews}
@@ -1831,14 +2248,9 @@ export default function App() {
                                                       const updatedNotes = (selectedPatient.manualNotes || '') + appendixText;
                                                       updateSelectedPatient({
                                                         ...selectedPatient,
-                                                        manualNotes: updatedNotes,
-                                                        // clear the fields after appending
-                                                        vulnerableWarningSigns: ews,
-                                                        vulnerableMitigation: rm,
-                                                        vulnerableContingency: cp,
-                                                        vulnerableContacts: ec
+                                                        manualNotes: updatedNotes
                                                       });
-                                                      alert('Vulnerable cohorts safety protocols appended successfully to the Letter Workspace! Scroll up to the editor to review, and click "Consolidate & Verify Drafts" to complete the audit.');
+                                                      alert('Vulnerable cohorts safety protocols appended successfully to the Letter Workspace! Scroll up to the editor to review, and click "Validate Missing Features" to complete the audit.');
                                                     }}
                                                     className="w-full h-9 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-1"
                                                   >
@@ -1847,34 +2259,58 @@ export default function App() {
                                                 </div>
                                               )}
 
-                                              {/* Omissions detailed list (only if not overridden/certified, or show reassuring message) */}
-                                              {isCorrectionalFollowup && isCorrectionChecked ? (
-                                                <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-lg p-3 text-xs flex items-start gap-2.5 font-medium animate-in zoom-in-95 duration-150">
-                                                  <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                                                  <div>
-                                                    <strong className="block font-bold">Secure Correctional Escrow Enabled</strong>
-                                                    <span>The required patient schedule/appointment withholding has been successfully verified. This section is marked compliant!</span>
+                                              {selectedPatient.hasAdditionalMedicines && (req.id === 'ceased_medicines' || req.id === 'additional_medicine_instructions') && (
+                                                <div className="bg-indigo-50 border border-indigo-200 text-indigo-950 p-4 rounded-lg font-medium space-y-2 mb-3.5 animate-in fade-in duration-350">
+                                                  <div className="flex items-center gap-1.5 text-indigo-900 font-bold uppercase tracking-wider text-[10px]">
+                                                    <Info className="w-3.5 h-3.5 shrink-0 text-indigo-600" />
+                                                    <span>Post-discharge Additional Medicines Advisory</span>
                                                   </div>
-                                                </div>
-                                              ) : (
-                                                <div className="space-y-2">
-                                                  <div className="text-[10px] font-extrabold text-red-700 uppercase tracking-wider flex items-center gap-1.5">
-                                                    <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                                                    <span>Missing Parameters/Topic Omitted:</span>
-                                                  </div>
-                                                  
-                                                  <div className="space-y-1.5 pl-1.5">
-                                                    {req.gaps.map((gap, gIdx) => (
-                                                      <div
-                                                        key={gIdx}
-                                                        className="border-b-0 border-slate-100 pl-3 border-l-2 border-l-red-500 text-slate-750 text-[11.5px] leading-relaxed font-semibold py-0.5 bg-slate-50/50 rounded-r-md"
-                                                      >
-                                                        <MarkdownView content={cleanGapText(gap.content)} />
-                                                      </div>
-                                                    ))}
-                                                  </div>
+                                                  <p className="text-[11.5px]">
+                                                    <strong className="text-indigo-900 text-xs block mb-1">Because you indicated patient additional information, these components might need to be included:</strong>
+                                                  </p>
+                                                  <ul className="list-disc pl-4.5 space-y-1.5 text-[11px] text-indigo-950/90 font-medium">
+                                                    <li><strong>Ongoing monitoring requirements</strong>, e.g., therapeutic drug monitoring, metabolic monitoring in patients on long term anti-psychotics, International Normalised Ratio (INR) testing and targets for warfarin</li>
+                                                    <li><strong>Medicine dose adjustment requirements</strong>, including recommendations for future cessation of medicines e.g., weaning dose plan of corticosteroids</li>
+                                                    <li><strong>Recommendation for commencement of a dose administration aid</strong></li>
+                                                    <li><strong>Recommendations for pain management for post-operative patients</strong>, including information on dose reduction and/or cessation of opioids.</li>
+                                                  </ul>
                                                 </div>
                                               )}
+
+                                              {/* Omissions detailed list (only if not overridden/certified, or show reassuring message) */}
+                                              <div className="space-y-2">
+                                                {req.gaps && req.gaps.length > 0 ? (
+                                                  <>
+                                                    <div className="text-[10px] font-extrabold text-red-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                      <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                                      <span>{isSpecialMandate ? "POLICY ADVISORY / REMINDER:" : "Missing Parameters/Topic Omitted:"}</span>
+                                                    </div>
+                                                    
+                                                    <div className="space-y-1.5 pl-1.5">
+                                                      {req.gaps.map((gap, gIdx) => (
+                                                        <div
+                                                          key={gIdx}
+                                                          className="border-b-0 border-slate-100 pl-3 border-l-2 border-l-red-500 text-slate-750 text-[11.5px] leading-relaxed font-semibold py-0.5 bg-slate-50/50 rounded-r-md"
+                                                        >
+                                                          <MarkdownView content={cleanGapText(gap.content)} />
+                                                        </div>
+                                                      ))}
+                                                    </div>
+                                                    </>
+                                                  ) : (
+                                                    <div className="bg-emerald-55/15 text-emerald-850 border border-emerald-250 p-4 rounded-xl flex items-start gap-3 mt-1.5">
+                                                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                                                      <div className="space-y-1">
+                                                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-emerald-800 block font-mono">
+                                                          Standard Fulfilled
+                                                        </span>
+                                                        <p className="text-[11.5px] font-medium text-slate-700 leading-relaxed">
+                                                          No gaps or omissions detected in this section. All parameters are fully compliant with guidelines.
+                                                        </p>
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </div>
 
                                               {/* Citation footnote */}
                                               <div className="pt-2.5 border-t border-slate-100 text-xs text-slate-550 font-medium leading-relaxed">
@@ -1989,12 +2425,30 @@ export default function App() {
                                                 {isExpanded && (
                                                   <div className="px-4 pb-3.5 pt-3 border-t border-slate-100 bg-slate-50/30 space-y-3 animate-in slide-in-from-top-1 duration-150 text-xs">
                                                     
+                                                    {selectedPatient.hasAdditionalMedicines && (req.id === 'ceased_medicines' || req.id === 'additional_medicine_instructions') && (
+                                                      <div className="bg-indigo-50 border border-indigo-200 text-indigo-950 p-4 rounded-lg font-medium space-y-2 mb-3.5 animate-in fade-in duration-355 text-left">
+                                                        <div className="flex items-center gap-1.5 text-indigo-900 font-bold uppercase tracking-wider text-[10px]">
+                                                          <Info className="w-3.5 h-3.5 shrink-0 text-indigo-600" />
+                                                          <span>Post-discharge Additional Medicines Advisory</span>
+                                                        </div>
+                                                        <p className="text-[11.5px]">
+                                                          <strong className="text-indigo-900 text-xs block mb-1">Because you indicated patient additional information, these components might need to be included:</strong>
+                                                        </p>
+                                                        <ul className="list-disc pl-4.5 space-y-1.5 text-[11px] text-indigo-955/95 font-semibold text-left">
+                                                          <li><strong>Ongoing monitoring requirements</strong>, e.g., therapeutic drug monitoring, metabolic monitoring in patients on long term anti-psychotics, International Normalised Ratio (INR) testing and targets for warfarin</li>
+                                                          <li><strong>Medicine dose adjustment requirements</strong>, including recommendations for future cessation of medicines e.g., weaning dose plan of corticosteroids</li>
+                                                          <li><strong>Recommendation for commencement of a dose administration aid</strong></li>
+                                                          <li><strong>Recommendations for pain management for post-operative patients</strong>, including information on dose reduction and/or cessation of opioids.</li>
+                                                        </ul>
+                                                      </div>
+                                                    )}
+
                                                     {/* Simplified output of what is missing */}
                                                     {hasGaps ? (
                                                       <div className="space-y-2">
                                                         <div className="text-[10px] font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
                                                           <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                                                          <span>Missing Information</span>
+                                                          <span className="uppercase">{['correctional_mandate', 'vulnerable_cohorts', 'mental_health_collaboration', 'additional_medicine_instructions'].includes(req.id) ? "POLICY ADVISORY / REMINDER" : "Missing Information"}</span>
                                                         </div>
                                                         
                                                         <div className="space-y-2 pl-1.5">
@@ -2050,16 +2504,12 @@ export default function App() {
                                     </div>
 
                                   </div>
-                                );
-                              })()}
 
-
-
-                            </div>
-                          </div>
-                        );
-                      })()
-                  ) : (
+                                </div>
+                              </div>
+                            );
+                          })()
+                      ) : (
                     <div className="py-12 border border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-center p-6 space-y-3">
                       <Activity className="w-10 h-10 text-slate-300 animate-pulse" />
                       <div>
@@ -2072,20 +2522,375 @@ export default function App() {
                   )}
                 </div>
               )}
-            </div>
-          )}
-        </main>
+
+            {/* Developer Feedback Loop Realtime Monitor */}
+            {isDevMode && (
+              <div id="developer-feedback-monitor" className="mt-8 border border-slate-200/90 rounded-xl overflow-hidden bg-white shadow-3xs text-left">
+                <button
+                  type="button"
+                  onClick={() => setShowDeveloperLogs(!showDeveloperLogs)}
+                  className="w-full px-5 py-3.5 bg-slate-50 border-b border-slate-200 hover:bg-slate-100/85 transition-colors flex items-center justify-between text-left select-none cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                    <Stethoscope className="w-4.5 h-4.5 text-slate-600" />
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest">
+                        Developer Feedback Loop Monitor
+                      </h4>
+                      <p className="text-[10px] text-slate-400 mt-0.5 font-medium">
+                        Subsequent clinical reviews, ratings, and prompt discrepancies logs are listed here in real-time.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-slate-500 bg-slate-200/70 p-1 px-2.5 rounded-md font-bold">
+                      {feedbackLogs.length} Records Loaded
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showDeveloperLogs ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+
+                {showDeveloperLogs &&
+                  <div className="p-5 space-y-4 max-h-120 overflow-y-auto bg-slate-50/40 font-sans">
+                    {feedbackLogs.length === 0 ? (
+                      <div className="text-center py-6 text-slate-400 text-xs font-medium">
+                        No clinician feedback has been submitted during this workspace container session yet. Rate an AI response or edit a summary draft to generate logs!
+                      </div>
+                    ) : (
+                      <div className="space-y-3.5">
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Clinical Feedback Stream</span>
+                          <button
+                            type="button"
+                            onClick={(e) => handleClearAllLogs(e)}
+                            className="px-2.5 py-1 bg-rose-50 border border-rose-150 rounded-lg text-rose-700 hover:bg-rose-100/70 hover:border-rose-200 text-[10px] font-bold transition-all cursor-pointer select-none flex items-center gap-1"
+                            title="Clear all responses and suggestions permanently"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Clear All Responses</span>
+                          </button>
+                        </div>
+
+                        {feedbackLogs.map((log: any, idxKey: number) => {
+                          const isFailure = log.type === 'heavy_edit_failure';
+                          return (
+                            <div
+                              key={log.id || idxKey}
+                              className={`p-4 rounded-xl border text-xs shadow-3xs flex flex-col space-y-2 bg-white ${
+                                isFailure 
+                                  ? 'border-amber-250 bg-amber-50/10' 
+                                  : 'border-slate-200 bg-white/75'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                                      isFailure
+                                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                        : log.type === 'rating'
+                                          ? 'bg-sky-50 text-sky-700 border border-sky-150'
+                                          : 'bg-slate-100 text-slate-705 border border-slate-200'
+                                    }`}>
+                                      {log.type === 'heavy_edit_failure' ? '⚠️ Prompt Failure (Heavy Edit)' : log.type.replace(/_/g, ' ')}
+                                    </span>
+                                    {log.rating && (
+                                      <span className={`text-[9.5px] font-bold uppercase ${log.rating === 'helpful' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                        {log.rating === 'helpful' ? '👍 Helpful' : '👎 Unhelpful'}
+                                      </span>
+                                    )}
+                                    <span className="text-[11px] font-bold text-slate-700">Patient: Anonymized Profile</span>
+                                  </div>
+                                  <p className="text-[11.5px] text-slate-800 font-medium leading-relaxed mt-1">
+                                    {log.feedbackText}
+                                  </p>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5 shrink-0 text-right">
+                                  <span className="text-[10px] text-slate-400 font-mono shrink-0 whitespace-nowrap">
+                                    {new Date(log.timestamp).toLocaleTimeString()}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteLog(log.id || `fdb-${idxKey}`, e)}
+                                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50/50 cursor-pointer transition-colors"
+                                    title="Delete individual response log"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {log.discrepancyRatio > 0 && (
+                                <div className="pt-2 border-t border-slate-100 flex flex-col space-y-1 text-[11px] font-medium">
+                                  <div className="flex justify-between text-slate-500">
+                                    <span>Semantic Discrepancy Margin:</span>
+                                    <span className={isFailure ? "text-amber-700 font-bold" : "text-slate-605"}>
+                                      {(log.discrepancyRatio * 100).toFixed(1)}% {isFailure ? '(Threshold-Triggered Prompt Failure)' : ''}
+                                    </span>
+                                  </div>
+                                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                    <div 
+                                      className={`h-full rounded-full ${isFailure ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                      style={{ width: `${Math.min(100, log.discrepancyRatio * 100)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {isFailure && log.originalText && log.modifiedText && (
+                                <details className="text-[10.5px] text-slate-500 mt-1 cursor-pointer select-none">
+                                  <summary className="hover:text-slate-750 font-bold text-slate-600 flex items-center gap-1">
+                                    <span>View prompt discrepancy diff</span>
+                                  </summary>
+                                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4 border border-slate-205 rounded-lg p-2.5 bg-slate-50/50 font-mono max-h-60 overflow-y-auto leading-relaxed">
+                                    <div className="space-y-1">
+                                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block font-sans">AI Prompt Output:</span>
+                                      <div className="text-slate-600 whitespace-pre-wrap">{log.originalText}</div>
+                                    </div>
+                                    <div className="space-y-1 border-t md:border-t-0 md:border-l border-slate-200 pt-2 md:pt-0 md:pl-3">
+                                      <span className="text-[9px] font-bold text-amber-700 uppercase tracking-widest block font-sans">Clinician Revision:</span>
+                                      <div className="text-slate-850 whitespace-pre-wrap font-bold">{log.modifiedText}</div>
+                                    </div>
+                                  </div>
+                                </details>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                }
+              </div>
+            )}
+          </div>
+        )}
+      </main>
       </div>
 
       {/* Patient demographics configuration modal removed in favor of quick inline extraction */}
 
       {/* Humble aesthetic page bottom credits */}
       <footer className="bg-white border-t border-slate-200 px-6 py-4 flex flex-col items-start gap-1">
-        <span className="text-sm font-medium text-slate-600">Referral Letter Auditor</span>
+        <span 
+          onClick={() => {
+            if (isDevMode) {
+              setIsDevMode(false);
+              localStorage.setItem('clinician_dev_mode', 'false');
+              showNotice('Developer Loop Monitor is now Hidden');
+            } else {
+              setIsPasswordModalOpen(true);
+              setPasswordError('');
+              setPasswordInput('');
+            }
+          }}
+          className="text-sm font-medium text-slate-600 cursor-pointer hover:text-slate-850 select-none flex items-center gap-1.5"
+          title="Clinician Developer toggle"
+        >
+          <span>Referral Letter Auditor</span>
+          {isDevMode && <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">Developer Mode</span>}
+        </span>
         <span className="text-xs text-slate-400 max-w-2xl text-left">
-          A clinician's assistant to audit written referral letters, checking them against standard discharge guidelines to ensure no required clinical elements are missing.
+          A clinician's assistant to audit written referral letters, checking them against standard discharge guidelines to ensure no required clinical elements are missing. Click title to toggle developer dashboard.
         </span>
       </footer>
+
+      {/* Floating Side Feedback Bubble & Dialog widget */}
+      <div id="clinician-feedback-bubble" className="fixed bottom-6 right-6 z-50 font-sans">
+        {!isSuggestionOpen ? (
+          <button
+            type="button"
+            onClick={() => {
+              setIsSuggestionOpen(true);
+              setSuggestionSuccess(false);
+            }}
+            className="flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full p-4 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all duration-200 group cursor-pointer"
+            title="App Suggestion or Bug Report"
+          >
+            <MessageSquare className="w-5 h-5 animate-pulse" />
+            <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 ease-in-out font-bold text-xs shrink-0 whitespace-nowrap">
+              Log Bug / Suggestion
+            </span>
+          </button>
+        ) : (
+          <div className="bg-white border border-slate-200 rounded-2xl w-80 sm:w-88 shadow-2xl p-5 text-left flex flex-col space-y-4 animate-in fade-in slide-in-from-bottom-5 duration-300">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-1.5 text-slate-850">
+                <span className="p-1.5 bg-emerald-50 rounded-lg text-emerald-700">
+                  <MessageSquare className="w-4 h-4" />
+                </span>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider">Clinician Support Center</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Submit app suggestions or bug logs</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSuggestionOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {suggestionSuccess ? (
+              <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">
+                  ✓
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800">Feedback Logged Successfully</p>
+                  <p className="text-[10.5px] text-slate-400 mt-1 max-w-[240px] mx-auto leading-relaxed">
+                    Thanks! Clinical developers will examine your request and adjust the platform accordingly as part of our automated feedback cycle.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSuggestionSuccess(false)}
+                  className="px-3.5 py-1.5 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg font-bold transition-all cursor-pointer"
+                >
+                  Submit another report
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSendClinicalFeedback} className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Issue or Type of Request:</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(['suggestion', 'bug', 'general'] as const).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setSuggestionType(type)}
+                        className={`py-1.5 px-2 rounded-lg text-[11px] font-bold capitalize transition-all cursor-pointer border ${
+                          suggestionType === type
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-3xs'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100/80'
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Your Message / Clinician Notes:</label>
+                  <textarea
+                    value={suggestionText}
+                    onChange={(e) => setSuggestionText(e.target.value)}
+                    placeholder={
+                      suggestionType === 'bug'
+                        ? "Describe screen issues, missing buttons, or faulty calculations..."
+                        : "How can we make this auditor better? (e.g., additional guidelines, better layouts)"
+                    }
+                    required
+                    className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none min-h-24 resize-y leading-relaxed text-slate-800"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Email (Optional):</label>
+                    <span className="text-[9px] text-slate-400 font-medium">For clarifications</span>
+                  </div>
+                  <input
+                    type="email"
+                    value={suggestionEmail}
+                    onChange={(e) => setSuggestionEmail(e.target.value)}
+                    placeholder="dr.smith@health.nsw.gov.au"
+                    className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none text-slate-800"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm active:scale-[0.98] transition-all cursor-pointer mt-1"
+                >
+                  Send Report
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Clinician Developer Authentication Modal */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-sm shadow-2xl p-6 text-left flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-lg bg-amber-50 text-amber-700">
+                  <ShieldCheck className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Developer Verification</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Verify credentials to access developer utilities</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPasswordModalOpen(false);
+                  setPasswordError('');
+                  setPasswordInput('');
+                }}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleVerifyPassword} className="space-y-4 pt-1">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Developer Password:
+                </label>
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value);
+                    if (passwordError) setPasswordError('');
+                  }}
+                  autoFocus
+                  placeholder="••••••••••••"
+                  className="w-full text-xs px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none text-slate-800 font-mono tracking-widest focus:ring-1 focus:ring-emerald-500"
+                  required
+                />
+                
+                {passwordError && (
+                  <p className="text-[11px] text-rose-600 font-medium">
+                    {passwordError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPasswordModalOpen(false);
+                    setPasswordError('');
+                    setPasswordInput('');
+                  }}
+                  className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-lg text-xs cursor-pointer transition-all select-none"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+                >
+                  Verify Access
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

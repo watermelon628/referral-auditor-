@@ -23,13 +23,15 @@ export interface Patient {
   electronicLetter: string | null;
   aiInterpretationVerified?: boolean;
   isOutOfScope?: boolean;
+  isMentalHealthInpatient?: boolean;
+  isEmergencyDepartment?: boolean;
+  isOutpatientClinic?: boolean;
   isDayOnly?: boolean;
   isWellBabyObstetric?: boolean;
   isVulnerable?: boolean;
   isCorrectional?: boolean;
   isMentalHealthDischargeNonMH?: boolean;
   hasAdditionalMedicines?: boolean;
-  isFollowUpSecureHandoverChecked?: boolean;
   vulnerableWarningSigns?: string;
   vulnerableMitigation?: string;
   vulnerableContingency?: string;

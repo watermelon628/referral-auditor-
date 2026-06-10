@@ -6,6 +6,7 @@
 import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
@@ -187,81 +188,174 @@ function parseDemographicsFallback(manualNotes: string, cleanedMarkdown: string)
 }
 
 // Resilient fallback rule-based clinical safety compliance generator when Gemini is over-quota
-function auditNotesFallback(name: string, dob: string, manualNotes: string, cleanedMarkdown: string): any {
+function auditNotesFallback(name: string, dob: string, manualNotes: string, cleanedMarkdown: string, isDayOnly?: boolean, isVulnerable?: boolean, isCorrectional?: boolean, hasAdditionalMedicines?: boolean): any {
   const text = `${manualNotes || ''}\n${cleanedMarkdown || ''}`.toLowerCase();
   
-  const requirements = [
-    {
-      id: 'patient_fields',
-      title: 'Patient details',
-      items: [
-        { name: 'MRN Number', pattern: /\bmrn\b|\bmedical record number/ },
-        { name: 'Home Address', pattern: /\baddress\b|\bhome address/ },
-        { name: 'Telephone number', pattern: /\bphone\b|telephone|phone number|contact\b/ },
-        { name: 'Gender/Sex', pattern: /\bgender\b|sex\b/ },
-        { name: 'Date of Birth (DOB)', pattern: /\bdob\b|date of birth/ }
-      ]
-    },
-    {
-      id: 'hospital_details',
-      title: 'Hospital & Contact Details',
-      items: [
-        { name: 'Discharging Specialty Unit / Hospital contact phone number', pattern: /contact\s+phone|specialty\s+phone|contact\s+number/ }
-      ]
-    },
-    {
-      id: 'gp_details',
-      title: 'GP / Recipient Details',
-      items: [
-        { name: 'Primary care GP / Recipient Address', pattern: /gp\b|general practitioner/ }
-      ]
-    },
-    {
-      id: 'author_clinician',
-      title: 'Author & Discharging Clinician',
-      items: [
-        { name: 'Admitting supervisor name (Supervisor AMO)', pattern: /supervisor|admitting supervisor|attending supervisor/ }
-      ]
-    },
-    {
-      id: 'presentation_details',
-      title: 'Presentation Details',
-      items: [
-        { name: 'Length of Stay (Total days)', pattern: /length of stay|los|total days/ },
-        { name: 'Discharge destination details', pattern: /discharge destination|discharged to/ }
-      ]
-    },
-    {
-      id: 'problems',
-      title: 'Presenting Problem & Diagnoses',
-      items: [
-        { name: 'Principal diagnosis responsible for admission', pattern: /principal diagnosis|reason for admission/ },
-        { name: 'Past medical history summary', pattern: /past medical history|comorbidities|pmhx/ }
-      ]
-    },
-    {
-      id: 'procedures',
-      title: 'Procedures',
-      items: [
-        { name: 'Chronological invasive clinical interventions or Explicit "nil performed"', pattern: /procedure|operation|nil performed|intervention|invasive/ }
-      ]
-    },
-    {
-      id: 'allergies',
-      title: 'Allergies & Adverse Reactions',
-      items: [
-        { name: 'Specific drug allergy manifestation OR Explicit "nil known"', pattern: /allerg|adverse|nil known/ }
-      ]
-    },
-    {
-      id: 'medicines_discharge',
-      title: 'Medicines on Discharge',
-      items: [
-        { name: 'New medications section', pattern: /new medicine|new med/ },
-        { name: 'Changed/Ceased medications section', pattern: /changed medicine|changed med|ceased medicine|stopped medicine/ }
-      ]
+  let requirements = [];
+
+  if (isDayOnly) {
+    requirements = [
+      {
+        id: 'patient_fields',
+        title: 'Provided Patient identification',
+        items: [
+          { name: 'Name', pattern: /\bname\b/ },
+          { name: 'MRN Number', pattern: /\bmrn\b|\bmedical record number/ },
+          { name: 'Age', pattern: /\bage\b/ },
+          { name: 'Gender/Sex', pattern: /\bgender\b|sex\b/ },
+          { name: 'Date of Birth (DOB)', pattern: /\bdob\b|date of birth/ },
+          { name: 'Home Address', pattern: /\baddress\b|\bhome address/ },
+          { name: 'Telephone number', pattern: /\bphone\b|telephone|phone number|contact\b/ }
+        ]
+      },
+      {
+        id: 'presenting_problem',
+        title: 'Presenting Problem/Reason for procedure',
+        items: [
+          { name: 'Presenting Problem/Reason for procedure', pattern: /reason\b|presenting\b|indication|problem/ }
+        ]
+      },
+      {
+        id: 'planned_procedure',
+        title: 'Planned procedure',
+        items: [
+          { name: 'Chronological invasive clinical interventions or Explicit "nil performed"', pattern: /procedure|operation|nil performed|intervention|invasive/ },
+          { name: 'Medical device details (if implanted/explanted)', pattern: /device|implant|explant|model|batch/ }
+        ]
+      },
+      {
+        id: 'summary_of_procedure',
+        title: 'Summary of procedure',
+        items: [
+          { name: 'Date of procedure', pattern: /date\b|when\b/ },
+          { name: 'AMO and / or procedural list', pattern: /amo\b|procedural list\b|list\b|operator\b/ },
+          { name: 'Primary procedure performed', pattern: /primary procedure\b|procedure performed\b|performed\b/ },
+          { name: 'Outcomes / complications', pattern: /outcome|complication|result\b/ }
+        ]
+      },
+      {
+        id: 'continued_care',
+        title: 'Continued care recommendations',
+        items: [
+          { name: 'Post-operative precautions', pattern: /precaution|warning|safety\b/ },
+          { name: 'Post-operative instructions e.g. Medicine instructions', pattern: /instruction|medicine|medication|dose/ },
+          { name: 'Follow up arrangements', pattern: /follow up|review\b|appointment\b/ }
+        ]
+      }
+    ];
+  } else {
+    requirements = [
+      {
+        id: 'patient_fields',
+        title: 'Patient details',
+        items: [
+          { name: 'MRN Number', pattern: /\bmrn\b|\bmedical record number/ },
+          { name: 'Home Address', pattern: /\baddress\b|\bhome address/ },
+          { name: 'Telephone number', pattern: /\bphone\b|telephone|phone number|contact\b/ },
+          { name: 'Gender/Sex', pattern: /\bgender\b|sex\b/ },
+          { name: 'Date of Birth (DOB)', pattern: /\bdob\b|date of birth/ }
+        ]
+      },
+      {
+        id: 'hospital_details',
+        title: 'Hospital & Contact Details',
+        items: [
+          { name: 'Discharging Specialty Unit / Hospital contact phone number', pattern: /contact\s+phone|specialty\s+phone|contact\s+number/ }
+        ]
+      },
+      {
+        id: 'gp_details',
+        title: 'GP / Recipient Details',
+        items: [
+          { name: 'Primary care GP / Recipient Address', pattern: /gp\b|general practitioner/ }
+        ]
+      },
+      {
+        id: 'author_clinician',
+        title: 'Author & Discharging Clinician',
+        items: [
+          { name: 'Admitting supervisor name (Supervisor AMO)', pattern: /supervisor|admitting supervisor|attending supervisor/ }
+        ]
+      },
+      {
+        id: 'presentation_details',
+        title: 'Presentation Details',
+        items: [
+          { name: 'Length of Stay (Total days)', pattern: /length of stay|los|total days/ },
+          { name: 'Discharge destination details', pattern: /discharge destination|discharged to/ }
+        ]
+      },
+      {
+        id: 'problems',
+        title: 'Presenting Problem & Diagnoses',
+        items: [
+          { name: 'Principal diagnosis responsible for admission', pattern: /principal diagnosis|reason for admission/ },
+          { name: 'Past medical history summary', pattern: /past medical history|comorbidities|pmhx/ }
+        ]
+      },
+      {
+        id: 'procedures',
+        title: 'Procedures',
+        items: [
+          { name: 'Chronological invasive clinical interventions or Explicit "nil performed"', pattern: /procedure|operation|nil performed|intervention|invasive/ }
+        ]
+      },
+      {
+        id: 'allergies',
+        title: 'Allergies & Adverse Reactions',
+        items: [
+          { name: 'Specific drug allergy manifestation OR Explicit "nil known"', pattern: /allerg|adverse|nil known/ }
+        ]
+      },
+      {
+        id: 'medicines_discharge',
+        title: 'Medicines on Discharge',
+        items: [
+          { name: 'New medications section', pattern: /new medicine|new med/ },
+          { name: 'Changed/Ceased medications section', pattern: /changed medicine|changed med|ceased medicine|stopped medicine/ }
+        ]
+      }
+    ];
+  }
+
+  if (!isDayOnly) {
+    if (isVulnerable) {
+      requirements.push({
+        id: 'vulnerable_cohorts',
+        title: 'Vulnerable Cohorts (Sec 2.1.1)',
+        items: [
+          { name: 'early warning signs of relapse of their current illness', pattern: /warning signs|relapse/ },
+          { name: 'identification of risks and strategies to reduce each risk identified', pattern: /risks|strategies to reduce/ },
+          { name: 'contingency plans and relapse prevention strategies', pattern: /contingency|prevention/ },
+          { name: 'emergency telephone contacts to access appropriate care', pattern: /emergency|contacts|call/ }
+        ]
+      });
     }
-  ];
+
+    if (isCorrectional) {
+      requirements.push({
+        id: 'correctional_mandate',
+        title: 'Correctional Handover Mandate (Sec 2.1.1)',
+        items: [
+          { name: 'Place the prepared discharge documentation in a sealed envelope marked ‘Confidential’ and for the attention of the Justice Health and Forensic Mental Health Network. Give the sealed envelope to the escorting corrections officers who will deliver it to a Justice Health and Forensic Mental Health Network clinician at the receiving facility.', pattern: /sealed envelope|confidential|escorting corrections|justice health/ },
+          { name: 'Do not advise the patient of any follow-up appointments. This poses a security risk and if disclosed the appointment will need to be re-scheduled.', pattern: /not advise the patient|do not advise|security risk/ }
+        ]
+      });
+    }
+
+    if (hasAdditionalMedicines) {
+      requirements.push({
+        id: 'additional_medicine_instructions',
+        title: 'Additional Medicine Instructions (Sec 2.1.1 & 2.1.2)',
+        items: [
+          { name: 'Because you indicated patient had additional medicine instruction these components might need to included: Ongoing monitoring requirements', pattern: /ongoing monitoring/ },
+          { name: 'Because you indicated patient had additional medicine instruction these components might need to included: Medicine dose adjustment requirements', pattern: /dose adjustment/ },
+          { name: 'Because you indicated patient had additional medicine instruction these components might need to included: Recommendation for commencement of a dose administration aid', pattern: /dose administration aid/ },
+          { name: 'Because you indicated patient had additional medicine instruction these components might need to included: Recommendations for pain management for post-operative patients', pattern: /pain management/ }
+        ]
+      });
+    }
+  }
 
   const missingGapsList: string[] = [];
 
@@ -274,7 +368,9 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
     });
 
     if (missingInThisCategory.length > 0) {
-      missingGapsList.push(`* **${req.title} Gaps**:\n   ` + missingInThisCategory.map(f => `- Missing required element: **${f}**`).join('\n   '));
+      missingGapsList.push(`### ${req.title}\n` + missingInThisCategory.map(f => `- Missing: **${f}**`).join('\n'));
+    } else {
+      missingGapsList.push(`### ${req.title}\n- No omissions identified.`);
     }
   });
 
@@ -293,7 +389,16 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
 - Ensure discharge medication categories contain alphabetical orderings.
 - Append precise admitting supervisor names and designations before clinical signoff.`;
 
-  const missingInfoAnalysis = `### ⚠️ Missing Required NSW Health GL2022_005 Parameters:
+  let missingInfoAnalysis = "";
+
+  if (isDayOnly) {
+    missingInfoAnalysis = `### ⚠️ Missing Day-Only Parameters:
+
+The document has been audited against standard requirements. The following elements were completely unmentioned or omitted:
+
+${missingGapsList.join('\n\n')}`;
+  } else {
+    missingInfoAnalysis = `### ⚠️ Missing Required NSW Health GL2022_005 Parameters:
 
 The document has been audited against standard requirements. The following elements were completely unmentioned or omitted:
 
@@ -302,6 +407,7 @@ ${missingGapsList.join('\n\n')}
 * **Invasive Interventions / Operations**: No chronological lists or explicit 'nil performed' statements were identified in the scanned draft.
 * **Medications Categorization**: No alphabetical medication listings sorted distinctly as 'New', 'Changed', and 'Unchanged' were identified in the transcript.
 * **Adverse Events / Drug Reactions**: Explicit 'nil known' or allergic manifestations were not documented.`;
+  }
 
   return { summary, missingInfoAnalysis };
 }
@@ -547,19 +653,15 @@ The patient is marked as WELL-BABY / OBSTETRIC. They do not follow 2.1.1.
 - In the "summary" property, state that maternity/newborn patients are subject to specific midwifery postnatal pathways.
 - In the "missingInfoAnalysis" property, output exactly and ONLY: "For well mothers and babies, discharge can be initiated and coordinated by midwifery staff as per local Postnatal Clinical Pathways, and under the framework of the National Midwifery Guidelines for Consultation and Referral. Discharge summaries must be complemented by the My Personal Health Record and provided to the mother."`;
       } else if (isDayOnly) {
-        systemInstruction = `You are an expert clinical compliance auditor.
-The patient is DAY ONLY and does NOT follow 2.1.1 requirements for minimum information. You must verify and check ONLY for the following information specified in GL2022_005 Section 3.1.2:
-1. Patient identification: Name, Medical Record Number (MRN), Age, Sex, Gender, Date of birth (age in years or months/days where applicable), Address, Telephone number.
-2. Presenting problem / reason for procedure.
-3. Planned procedure.
-4. Summary of procedure, include only these points:
-  - Date of procedure
-  - AMO and / or procedural list
-  - Primary procedure performed
-  - Outcomes / complications
-5. Continued care recommendations: required post-operative precautions (safety warning signs), specific post-operative care instructions e.g. medicine instructions, and planned follow-up/review arrangements (only use these points from 3.1.2).
+        systemInstruction = `You are an expert clinical compliance auditor helping clinicians check written referral or discharge letters in accordance with NSW Health Guideline GL2022_005 Section 3.1.2 standards.
+The patient is DAY ONLY and does NOT follow 2.1.1 requirements. You must verify and check ONLY for the following information specified in GL2022_005 Section 3.1.2:
+1. Provided Patient identification. THE ONLY MISSING INFORMATION YOU SHOULD LOOK OUT FOR SHOULD BE: Name, Medical Record Number (MRN), Age, Sex, Gender, Date of birth (age in years or months/days where applicable), Address, Telephone number.
+2. Presenting Problem/Reason for procedure.
+3. Planned procedure. This includes "Invasive clinical interventions including operations and procedures must be documented in chronological order. If no procedures were performed, document ‘nil performed’." and "Procedures with medical devices Where a medical device has been implanted or explanted during the inpatient visit, the discharging clinician must include the product name, type, model and batch number for all devices."
+4. Summary of procedure. This includes Date of procedure, AMO and / or procedural list, Primary procedure performed and Outcomes / complications.
+5. Continued care recommendations. This includes: Post-operative precautions, Post-operative instructions e.g Medicine instructions and Follow up arrangements.
 
-In your "missingInfoAnalysis", check only for these items. List exactly what is missing simply and directly, keeping it strictly aligned with Section 3.1.2.`;
+In your "missingInfoAnalysis", look ONLY for omissions in those 5 categories. List exactly what is missing simply, directly, and categorized exactly under headers matching the 5 numbered categories above WITH '### ' as the prefix for each header (e.g. '### Provided Patient identification'). DO NOT use numbering in the header itself (i.e. '### Provided Patient identification' NOT '### 1. Provided Patient identification'). DO NOT add anything random to any sections or check for any standard 2.1.1 items.`;
       } else {
         // Standard 2.1.1 rules
         if (isVulnerable) {
@@ -611,9 +713,12 @@ You must check if these additional documentation parameters are specified. If an
         }
       }
 
-      systemInstruction += `\n\nFormat your output as a JSON object with:
+      systemInstruction += `\n\nCRITICAL OUTPUT FORMATTING INSTRUCTIONS FOR "missingInfoAnalysis":
+List exactly what is missing simply, directly, and categorized exactly under headers matching the guideline categories. YOU MUST USE '### ' as the prefix for each header (e.g. '### Patient details', '### Vulnerable Cohorts', etc.). DO NOT use numbering in the header itself. If a category has no omissions, you MUST still output the header and write "- No omissions identified." underneath it.
+
+Format your output as a JSON object with:
 1. "summary": A professional clinical summary of findings represented in the letter, formatted using clean markdown.
-2. "missingInfoAnalysis": A comprehensive structured bulleted audit listing ONLY the clinical or logistical elements that are completely unmentioned or missing in the provided letter.`;
+2. "missingInfoAnalysis": A comprehensive structured bulleted audit listing ONLY the clinical or logistical elements that are completely unmentioned or missing in the provided letter, following the exact header formatting instructed above.`;
 
       const prompt = `Perform a compliance safety audit on the following clinical letter text:
 Patient Demographics Context:
@@ -665,14 +770,22 @@ Perform the following tasks:
       let dob = "";
       let manualNotes = "";
       let cleanedMarkdown = "";
+      let isDayOnly = false;
+      let isVulnerable = false;
+      let isCorrectional = false;
+      let hasAdditionalMedicines = false;
       if (req && req.body) {
         name = req.body.name || "";
         dob = req.body.dob || "";
         manualNotes = req.body.manualNotes || "";
         cleanedMarkdown = req.body.cleanedMarkdown || "";
+        isDayOnly = req.body.isDayOnly || false;
+        isVulnerable = req.body.isVulnerable || false;
+        isCorrectional = req.body.isCorrectional || false;
+        hasAdditionalMedicines = req.body.hasAdditionalMedicines || false;
       }
       
-      const fallbackResult = auditNotesFallback(name, dob, manualNotes, cleanedMarkdown);
+      const fallbackResult = auditNotesFallback(name, dob, manualNotes, cleanedMarkdown, isDayOnly, isVulnerable, isCorrectional, hasAdditionalMedicines);
       const errorDetails = error?.message || 'Unknown API Error';
       res.json({ ...fallbackResult, isQuotaError: true, serverErrorDetails: errorDetails });
     }
@@ -740,6 +853,115 @@ Produce a JSON containing:
       
       const errorDetails = error?.message || 'Unknown API Error';
       res.json({ patientLetter, electronicLetter, isQuotaError: true, serverErrorDetails: errorDetails });
+    }
+  });
+
+  // API: Get clinician feedback logs
+  app.get('/api/feedback-logs', (req, res) => {
+    try {
+      const filePath = path.join(process.cwd(), 'feedback_logs.json');
+      if (fs.existsSync(filePath)) {
+        const rawData = fs.readFileSync(filePath, 'utf8');
+        return res.json(JSON.parse(rawData));
+      }
+      return res.json([]);
+    } catch (error: any) {
+      console.error('Error reading feedback logs:', error);
+      res.status(500).json({ error: 'Could not retrieve feedback logs.' });
+    }
+  });
+
+  // API : Delete all clinician feedback logs
+  app.delete('/api/feedback-logs/clear', (req, res) => {
+    try {
+      const filePath = path.join(process.cwd(), 'feedback_logs.json');
+      fs.writeFileSync(filePath, JSON.stringify([], null, 2), 'utf8');
+      return res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error clearing feedback logs:', error);
+      res.status(500).json({ error: 'Failed to clear feedback logs.' });
+    }
+  });
+
+  // API: Delete an individual clinician feedback log by ID
+  app.delete('/api/feedback-logs/:id', (req, res) => {
+    try {
+      const { id } = req.params;
+      const filePath = path.join(process.cwd(), 'feedback_logs.json');
+      if (fs.existsSync(filePath)) {
+        const rawData = fs.readFileSync(filePath, 'utf8');
+        let currentLogs = JSON.parse(rawData);
+        const originalLength = currentLogs.length;
+        currentLogs = currentLogs.filter((log: any, index: number) => {
+          if (log.id && log.id === id) return false;
+          if (id === `fdb-${index}`) return false;
+          return true;
+        });
+        fs.writeFileSync(filePath, JSON.stringify(currentLogs, null, 2), 'utf8');
+        return res.json({ success: true, deleted: originalLength > currentLogs.length });
+      }
+      return res.status(404).json({ error: 'Feedback file does not exist.' });
+    } catch (error: any) {
+      console.error('Error deleting feedback log:', error);
+      res.status(500).json({ error: 'Failed to delete feedback log.' });
+    }
+  });
+
+  // API: Save clinician feedback (thumbs up/down or heavy edit failures)
+  app.post('/api/feedback', (req, res) => {
+    try {
+      const {
+        type,
+        feedbackText,
+        discrepancyRatio,
+        rating,
+      } = req.body;
+
+      // Anonymize completely to prevent confidential data (PHI/PII) leakage in dev logs
+      const logEntry = {
+        id: `fdb-${Date.now()}`,
+        patientId: 'redacted',
+        patientName: 'Anonymous Patient',
+        type: type || 'rating',
+        rating: rating || '',
+        feedbackText: feedbackText || '',
+        originalText: '', // Omitted for data safety
+        modifiedText: '', // Omitted for data safety
+        discrepancyRatio: typeof discrepancyRatio === 'number' ? discrepancyRatio : 0,
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log(`\n=============================================================`);
+      console.log(`🏥 [CLINICAL DEVELOPER FEEDBACK LOOP] RECEIVED FEEDBACK:`);
+      console.log(`- Type: ${logEntry.type.toUpperCase()}`);
+      if (logEntry.rating) console.log(`- Developer Rating: ${logEntry.rating.toUpperCase()}`);
+      if (logEntry.discrepancyRatio) console.log(`- Discrepancy Ratio: ${(logEntry.discrepancyRatio * 100).toFixed(1)}%`);
+      if (logEntry.feedbackText) console.log(`- Clinician Memo: "${logEntry.feedbackText}"`);
+      console.log(`=============================================================\n`);
+
+      const filePath = path.join(process.cwd(), 'feedback_logs.json');
+      let currentLogs = [];
+      if (fs.existsSync(filePath)) {
+        try {
+          const raw = fs.readFileSync(filePath, 'utf8');
+          currentLogs = JSON.parse(raw);
+        } catch (e) {
+          console.warn("Could not parse existing feedback logs file, resetting:", e);
+        }
+      }
+
+      currentLogs.unshift(logEntry);
+      
+      // Keep only last 100 logs
+      if (currentLogs.length > 100) {
+        currentLogs = currentLogs.slice(0, 100);
+      }
+
+      fs.writeFileSync(filePath, JSON.stringify(currentLogs, null, 2), 'utf8');
+      res.json({ success: true, logEntry });
+    } catch (error: any) {
+      console.error('Error in /api/feedback:', error);
+      res.status(500).json({ error: 'Failed to write clinician feedback.' });
     }
   });
 
