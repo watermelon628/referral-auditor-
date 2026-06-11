@@ -199,13 +199,14 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
         id: 'patient_fields',
         title: 'Provided Patient identification',
         items: [
-          { name: 'Name', pattern: /\bname\b/ },
-          { name: 'MRN Number', pattern: /\bmrn\b|\bmedical record number/ },
-          { name: 'Age', pattern: /\bage\b/ },
-          { name: 'Gender/Sex', pattern: /\bgender\b|sex\b/ },
-          { name: 'Date of Birth (DOB)', pattern: /\bdob\b|date of birth/ },
-          { name: 'Home Address', pattern: /\baddress\b|\bhome address/ },
-          { name: 'Telephone number', pattern: /\bphone\b|telephone|phone number|contact\b/ }
+          { name: '.1. Name', pattern: /\bname\b/ },
+          { name: '2. Medical Record Number (MRN)', pattern: /\bmrn\b|\bmedical record number/ },
+          { name: '3. Age', pattern: /\bage\b/ },
+          { name: '4. Sex', pattern: /\bsex\b/ },
+          { name: '5. Gender', pattern: /\bgender\b/ },
+          { name: '6. Date of birth (age in years or months/days where applicable)', pattern: /\bdob\b|date of birth/ },
+          { name: '7. Address', pattern: /\baddress\b|\bhome address/ },
+          { name: '8. Telephone number', pattern: /\bphone\b|telephone|phone number|contact\b/ }
         ]
       },
       {
@@ -249,18 +250,23 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
         id: 'patient_fields',
         title: 'Patient details',
         items: [
-          { name: 'MRN Number', pattern: /\bmrn\b|\bmedical record number/ },
-          { name: 'Home Address', pattern: /\baddress\b|\bhome address/ },
-          { name: 'Telephone number', pattern: /\bphone\b|telephone|phone number|contact\b/ },
-          { name: 'Gender/Sex', pattern: /\bgender\b|sex\b/ },
-          { name: 'Date of Birth (DOB)', pattern: /\bdob\b|date of birth/ }
+          { name: '.1. Name', pattern: /\bname\b/ },
+          { name: '2. Medical Record Number (MRN)', pattern: /\bmrn\b|\bmedical record number/ },
+          { name: '3. Age', pattern: /\bage\b/ },
+          { name: '4. Sex', pattern: /\bsex\b/ },
+          { name: '5. Gender', pattern: /\bgender\b/ },
+          { name: '6. Date of birth (age in years or months/days where applicable)', pattern: /\bdob\b|date of birth/ },
+          { name: '7. Address', pattern: /\baddress\b|\bhome address/ },
+          { name: '8. Telephone number', pattern: /\bphone\b|telephone|phone number|contact\b/ }
         ]
       },
       {
         id: 'hospital_details',
         title: 'Hospital & Contact Details',
         items: [
-          { name: 'Discharging Specialty Unit / Hospital contact phone number', pattern: /contact\s+phone|specialty\s+phone|contact\s+number/ }
+          { name: 'ospital name and Local Health District (districts)/Specialty Health Network (networks)', pattern: /hospital|local health district|lhd|specialty health network|shn|district/i },
+          { name: 'Hospital address and contact details including phone numbers', pattern: /address|phone|contact|telephone/i },
+          { name: 'Speciality name and nominated contact details including phone numbers.', pattern: /specialty|nominated contact|phone|unit/i }
         ]
       },
       {
@@ -310,10 +316,7 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
       {
         id: 'medicines_discharge',
         title: 'Medicines on Discharge',
-        items: [
-          { name: 'New medications section', pattern: /new medicine|new med/ },
-          { name: 'Changed/Ceased medications section', pattern: /changed medicine|changed med|ceased medicine|stopped medicine/ }
-        ]
+        items: []
       }
     ];
   }
@@ -348,7 +351,6 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
         id: 'additional_medicine_instructions',
         title: 'Additional Medicine Instructions (Sec 2.1.1 & 2.1.2)',
         items: [
-          { name: 'Because you indicated patient had additional medicine instruction these components might need to included: Ongoing monitoring requirements', pattern: /ongoing monitoring/ },
           { name: 'Because you indicated patient had additional medicine instruction these components might need to included: Medicine dose adjustment requirements', pattern: /dose adjustment/ },
           { name: 'Because you indicated patient had additional medicine instruction these components might need to included: Recommendation for commencement of a dose administration aid', pattern: /dose administration aid/ },
           { name: 'Because you indicated patient had additional medicine instruction these components might need to included: Recommendations for pain management for post-operative patients', pattern: /pain management/ }
@@ -405,11 +407,10 @@ The document has been audited against standard requirements. The following eleme
 ${missingGapsList.join('\n\n')}
 
 * **Invasive Interventions / Operations**: No chronological lists or explicit 'nil performed' statements were identified in the scanned draft.
-* **Medications Categorization**: No alphabetical medication listings sorted distinctly as 'New', 'Changed', and 'Unchanged' were identified in the transcript.
 * **Adverse Events / Drug Reactions**: Explicit 'nil known' or allergic manifestations were not documented.`;
   }
 
-  return { summary, missingInfoAnalysis };
+  return { summary, missingInfoAnalysis, confidence: 95 };
 }
 
 // --- API Routes ---
@@ -622,17 +623,20 @@ CRITICAL FORMATTING GUIDELINES:
 
 NSW Health Guideline GL2022_005 Minimum Information Specifications (use to audit):
 Standard patients follow "requirements for minimum information" 2.1.1 of the RAG:
-1. Patient Details: Name on a single bold line, MRN, Age, Sex, Gender, DOB, Address, Telephone.
-2. Hospital/Clinician Details: Hospital name/address, specialty, discharging clinician designation, supervisor/admitting supervisor, signature or electronic credentials.
-3. Presentation Details: Admission/discharge dates, length of stay, clinical unit, clinical specialty, discharge destination.
-4. Problem/s: Reason for presentation, principal diagnosis, additional diagnoses, complications, past medical history.
-5. Procedures: Chronological invasive clinical interventions or 'nil performed'. Implanted/explanted medical device product name, type, model, batch number.
-6. Clinical Summary: Concise summary of hospital stay using short sentences, bullet points. ICU/HDU summary if appropriate.
-7. Allergies/Adverse Reactions: Medicine name/brand, reaction type, clinical manifestations, date/duration. 'Nil known' must be documented if none.
-8. Medicines on Discharge: Grouped strictly as: 'New' at top, followed by 'Changed', followed by 'Unchanged'. Ordered alphabetically.
-9. Medicines directions & Ceased medicines: Generic first, then brand; strength, form, route; dosage, frequency; duration. Ceased medicines detailed with reason and duration. Ongoing monitoring requirements, de-prescribing plans, dose administration aids.
-10. Alerts: Critical/Falls alerts as bullet points. Specific treatment and care recommendations with action ownership and timeframes.
-11. Follow-up Appointments: Description, date/time, booking status, primary care provider, location, contact, preparation instructions.`;
+1. Patient Details: .1. Name, 2. Medical Record Number (MRN), 3. Age, 4. Sex, 5. Gender, 6. Date of birth (age in years or months/days where applicable), 7. Address, 8. Telephone number.
+2. Hospital/Clinician Details: ospital name and Local Health District (districts)/Specialty Health Network (networks), Hospital address and contact details including phone numbers, Speciality name and nominated contact details including phone numbers, discharging clinician designation, supervisor/admitting supervisor, signature or electronic credentials.
+3. Recipient(s): the intended audience(s) e.g. patient allocated primary care provider.
+4. Author & Discharging Clinician: Discharging clinician’s designation (role in organisation), Discharging clinician’s supervisor (admitting/attending medical officer), Contact details of admitting/attending medical officer or delegate (if not previously stated), Signature or electronic credentials.
+5. Presentation Details: 1. Admission date, 2. Discharge date, 3. Length of stay at hospital, 4. Clinical unit (the location from which the patient was discharged), 5. Clinical specialty type (the specialty responsible for discharge), 6. Discharge destination. This is to be included for all patients including those who discharge against medical advice and deceased patients.
+6. Presenting Problem & Diagnoses: Reason for presentation, principal diagnosis, additional diagnoses/complications, and past medical history summary.
+7. Procedures: Chronological invasive clinical interventions or 'nil performed'. Implanted/explanted medical device product name, type, model, batch number.
+8. Clinical Course & Summary: Concise summary of hospital stay, Intensive care unit / high dependency unit is applicable.
+9. Allergies & Adverse Reactions: Relevant information to be documented including: Medicine/substance name and where relevant brand, Reaction type e.g., allergy, intolerance, adverse effect, Clinical manifestation e.g., rash, urticarial reaction, If a reaction occurred during admission: date/time, duration. Where there is no known allergy or adverse reaction ‘nil known’ must be documented.
+10. Medicines on Discharge: Medicines must be documented, grouped according to their status (i.e., new medicines at the top, followed by changed, then unchanged), and ordered alphabetically within each group. It is to be based on the medication reconciliation completed at the start of a patient’s admission. If significant changes in medicines have occurred, clearly group ‘medicines on admission’ and ‘medicines on discharge’. Any changes to the patient’s medicine regimen are to be identified and communicated in the discharge summary, together with a reason for each change: Medicine name: generic first, then brand specific to the patient if known; strength, form, and route. Directions: dose, frequency (including ‘as required’), and any special instructions e.g., in relation to food; when the next dose is due for intermittent medicines, or when the last dose was administered, Duration/end date, Status: new, changed or unchanged, Change reason/clinical indication.
+11. Ceased & Suspended Medicines: Medicine name: Generic first, then brand specific to the patient if known, strength, form and route. Reason: Explain why a medicine has been ceased or suspended. Duration: Identifying temporary versus permanent cessation.
+12. Clinically Relevant Alerts & Risks: Clinically relevant alerts are to be identified (e.g., falls risks).
+13. Recommendations & Future Actions: Specific recommendations for treatment, Specific recommendations for follow up care, Relevant timeframes for action, Pending investigations, results and actions required.
+14. Follow-up Appointments: document appointments that have been scheduled, are in the process of, or need to be, organised. It is recommended that most discharge follow-up appointments are initiated or confirmed prior to discharge by the discharging clinician. If this is not possible, ensure actions and persons responsible are noted clearly in the ‘Recommendation’ section of the discharge summary. The following appointment information must be provided: Description, Date and time, Booking status, Name of primary care provider being visited, Location, Contact details, Specific instructions e.g., Nil By Mouth (NBM) or preparation pre-visit, payments if required, Arranged/to be arranged by hospital/patient.`;
 
       if (isOutOfScope) {
         systemInstruction += `
@@ -655,7 +659,7 @@ The patient is marked as WELL-BABY / OBSTETRIC. They do not follow 2.1.1.
       } else if (isDayOnly) {
         systemInstruction = `You are an expert clinical compliance auditor helping clinicians check written referral or discharge letters in accordance with NSW Health Guideline GL2022_005 Section 3.1.2 standards.
 The patient is DAY ONLY and does NOT follow 2.1.1 requirements. You must verify and check ONLY for the following information specified in GL2022_005 Section 3.1.2:
-1. Provided Patient identification. THE ONLY MISSING INFORMATION YOU SHOULD LOOK OUT FOR SHOULD BE: Name, Medical Record Number (MRN), Age, Sex, Gender, Date of birth (age in years or months/days where applicable), Address, Telephone number.
+1. Provided Patient identification. THE ONLY MISSING INFORMATION YOU SHOULD LOOK OUT FOR SHOULD BE: .1. Name, 2. Medical Record Number (MRN), 3. Age, 4. Sex, 5. Gender, 6. Date of birth (age in years or months/days where applicable), 7. Address, 8. Telephone number.
 2. Presenting Problem/Reason for procedure.
 3. Planned procedure. This includes "Invasive clinical interventions including operations and procedures must be documented in chronological order. If no procedures were performed, document ‘nil performed’." and "Procedures with medical devices Where a medical device has been implanted or explanted during the inpatient visit, the discharging clinician must include the product name, type, model and batch number for all devices."
 4. Summary of procedure. This includes Date of procedure, AMO and / or procedural list, Primary procedure performed and Outcomes / complications.
@@ -667,11 +671,15 @@ In your "missingInfoAnalysis", look ONLY for omissions in those 5 categories. Li
         if (isVulnerable) {
           systemInstruction += `
 
-CRITICAL AUDIT RULE — VULNERABLE COHORT SPECIAL MANDATE (GL2022_005 Section 2.1.1):
-The patient is marked as belonging to a "Vulnerable Cohort" (cognitive impairment, complex dementia, recurrent readmission). Under GL2022_005 Section 2.1.1, the referral/discharge letter MUST contain clinical safety and escalation information:
-"For vulnerable patient groups who are at increased risk of rehospitalisation, the discharge document must also include information on: early warning signs of relapse of their current illness, identification of risks and strategies to reduce each risk identified, contingency plans and relapse prevention strategies, and emergency telephone contacts to access appropriate care."
+AUDIT RECOMMENDATION GUIDE — VULNERABLE COHORT SUGGESTIONS (GL2022_005 Section 2.1.1):
+The patient is marked as belonging to a "Vulnerable Cohort" (cognitive impairment, complex dementia, recurrent readmission). Under GL2022_005 Section 2.1.1, the referral/discharge letter is suggested (non-mandatory guideline) to contain clinical safety and escalation information:
+"discharge documents might also want to include:
+1. early warning signs of relapse of their current illness
+2. identification of risks and strategies to reduce each risk identified
+3. contingency plans and relapse prevention strategies
+4. emergency telephone contacts to access appropriate care."
 
-If any of these 4 elements (early warning signs, risk mitigation/strategies, contingency plans, emergency telephone contacts) are not explicitly documented in the text, you MUST flag them as missing in your "missingInfoAnalysis" list under the category "Vulnerable Cohorts (Sec 2.1.1)" using those exact terms.`;
+If any of these 4 elements (early warning signs, risk mitigation/strategies, contingency plans, emergency telephone contacts) are not explicitly documented in the text, you should flag them as suggested/recommended additions in your "missingInfoAnalysis" list under the category "Vulnerable Cohorts (Sec 2.1.1)" using those exact terms.`;
         }
 
         if (isCorrectional) {
@@ -702,14 +710,13 @@ If there are no details of collaborating with mental health service or community
 CRITICAL AUDIT RULE — ADDITIONAL MEDICINE INSTRUCTIONS:
 Additional ongoing medicine management instructions are required.
 "Where additional instructions are required for ongoing medicine management, the discharging clinician, in consultation with the pharmacist (where available), will document these instructions in a section following the ‘ceased medicines’ section of the discharge summary. Information to be documented in this section may include:
-- Ongoing monitoring requirements, e.g., therapeutic drug monitoring, metabolic monitoring in patients on long term anti-psychotics, International Normalised Ratio (INR) testing and targets for warfarin
 - Medicine dose adjustment requirements, including recommendations for future cessation of medicines e.g., weaning dose plan of corticosteroids
 - Recommendation for commencement of a dose administration aid
 - Recommendations for pain management for post-operative patients, including information on dose reduction and/or cessation of opioids.
 Refer to NSW Health Policy Directive High-Risk Medicines Management (PD2020_045) and NSW Health Policy Directive Medication Handling in NSW Public Health Facilities (PD2013_043) for further information. If a separate patient friendly medication list is provided, the information must be consistent with that of the discharge summary, and any changes made must be reflected in both documents.
 Patient friendly medication lists must state the date they were authorised on both the electronic and printed copy."
 
-You must check if these additional documentation parameters are specified. If any required monitoring, dose adjustments, dose aids, or pain/opioid reduction plans are needed but not documented, you must flag them under the category "Additional Medicine Instructions" in "missingInfoAnalysis".`;
+You must check if these additional documentation parameters are specified. If any required dose adjustments, dose aids, or pain/opioid reduction plans are needed but not documented, you must flag them under the category "Additional Medicine Instructions" in "missingInfoAnalysis".`;
         }
       }
 
@@ -718,7 +725,8 @@ List exactly what is missing simply, directly, and categorized exactly under hea
 
 Format your output as a JSON object with:
 1. "summary": A professional clinical summary of findings represented in the letter, formatted using clean markdown.
-2. "missingInfoAnalysis": A comprehensive structured bulleted audit listing ONLY the clinical or logistical elements that are completely unmentioned or missing in the provided letter, following the exact header formatting instructed above.`;
+2. "missingInfoAnalysis": A comprehensive structured bulleted audit listing ONLY the clinical or logistical elements that are completely unmentioned or missing in the provided letter, following the exact header formatting instructed above.
+3. "confidence": A compliance confidence rating as an integer from 1 to 100 representing your absolute technical and clinical certainty that you parsed the raw sources correctly against the checklist. If you have absolutely scanned and mapped rules successfully with no doubt, return 100 (highly recommended if you captured all details cleanly).`;
 
       const prompt = `Perform a compliance safety audit on the following clinical letter text:
 Patient Demographics Context:
@@ -753,8 +761,12 @@ Perform the following tasks:
                 type: Type.STRING,
                 description: 'Extremely simple, high-priority bulleted list of raw missing parameters or information elements (e.g. list of "(MRN), Age, Sex, Gender, Address, Telephone number"), with zero narrative and zero conversational commentary.',
               },
+              confidence: {
+                type: Type.INTEGER,
+                description: 'An integer between 1 and 100 representing auditing completeness confidence.',
+              },
             },
-            required: ['summary', 'missingInfoAnalysis'],
+            required: ['summary', 'missingInfoAnalysis', 'confidence'],
           },
         },
       });

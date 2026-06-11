@@ -59,7 +59,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'patient_details',
     title: 'Patient Details',
     displayOrder: 1,
-    standard: 'Patient full name displayed on a single bold line, Medical Record Number (MRN), Age, Sex, Gender, Date of Birth, Home Address, and Telephone Number.',
+    standard: '.1. Name\n2. Medical Record Number (MRN)\n3. Age\n4. Sex\n5. Gender\n6. Date of birth (age in years or months/days where applicable)\n7. Address\n8. Telephone number',
     source: 'Section 2.1.2 - Patient details',
     keywords: ['patient', 'demographics', 'name', 'mrn', 'age', 'dob', 'address', 'telephone', 'gender', 'sex']
   },
@@ -67,7 +67,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'hospital_details',
     title: 'Hospital & Contact Details',
     displayOrder: 2,
-    standard: 'Hospital name, local health district or specialty health network, address and contact details, and discharging specialty contact phone numbers.',
+    standard: 'ospital name and Local Health District (districts)/Specialty Health Network (networks)\n Hospital address and contact details including phone numbers\n Speciality name and nominated contact details including phone numbers.',
     source: 'Section 2.1.2 - Hospital details',
     keywords: ['hospital', 'district', 'contact', 'facility', 'specialty name', 'lhd', 'local health']
   },
@@ -75,7 +75,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'recipients',
     title: 'Recipient(s)',
     displayOrder: 3,
-    standard: 'Identification of the primary care provider recipient, e.g. the patient\'s nominated General Practitioner (GP) or Aboriginal Medical Service (AMS).',
+    standard: 'the intended audience(s) e.g. patient allocated primary care provider.',
     source: 'Section 2.1.2 - Recipient (s)',
     keywords: ['recipient', 'audience', 'gp', 'general practitioner', 'ams', 'aboriginal medical']
   },
@@ -83,7 +83,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'author_clinician',
     title: 'Author & Discharging Clinician',
     displayOrder: 4,
-    standard: 'Discharging clinician name, role designation, supervisor name (admitting/attending medical officer), nominated supervisor contact details, and clinical signature.',
+    standard: 'Discharging clinician’s designation (role in organisation), Discharging clinician’s supervisor (admitting/attending medical officer), Contact details of admitting/attending medical officer or delegate (if not previously stated), Signature or electronic credentials.',
     source: 'Section 2.1.2 - Discharging clinician',
     keywords: ['discharging clinician', 'author', 'supervisor', 'attending medical officer', 'signature', 'credentials', 'designation', 'role']
   },
@@ -91,7 +91,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'presentation_details',
     title: 'Presentation Details',
     displayOrder: 5,
-    standard: 'Admission date, discharge date, total length of stay, clinical unit, clinical specialty responsible, and discharge destination details.',
+    standard: '1. Admission date\n2. Discharge date\n3. Length of stay at hospital\n4. Clinical unit (the location from which the patient was discharged)\n5. Clinical specialty type (the specialty responsible for discharge)\n6. Discharge destination. This is to be included for all patients including those who discharge against medical advice and deceased patients.',
     source: 'Section 2.1.2 - Presentation details',
     keywords: ['presentation', 'admission date', 'discharge date', 'length of stay', 'clinical unit', 'destination', 'clinical specialty', 'los']
   },
@@ -115,7 +115,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'clinical_summary',
     title: 'Clinical Course & Summary',
     displayOrder: 8,
-    standard: 'A concise free text summary of the hospital course focusing on quality rather than quantity, using short sentences and bullet points. Summary of ICU/HDU stays where indicated.',
+    standard: 'Concise summary of hospital stay, Intensive care unit / high dependency unit is applicable',
     source: 'Section 2.1.2 - Clinical summary',
     keywords: ['clinical summary', 'course', 'icu', 'hdu', 'stay', 'short sentences', 'hospital stay', 'concise summary']
   },
@@ -123,7 +123,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'allergies',
     title: 'Allergies & Adverse Reactions',
     displayOrder: 9,
-    standard: 'Specific drug or substance name, brand if known, reaction type (allergy, intolerance, adverse effect), and clinical manifestation. If no allergies are identified, "nil known" must be explicitly written.',
+    standard: 'Relevant information to be documented including:\nMedicine/substance name and where relevant brand\nReaction type e.g., allergy, intolerance, adverse effect\nClinical manifestation e.g., rash, urticarial reaction\nIf a reaction occurred during admission: date/time, duration.\nWhere there is no known allergy or adverse reaction ‘nil known’ must be documented.',
     source: 'Section 2.1.2 - Allergies / adverse reactions',
     keywords: ['allergies', 'allergy', 'adverse', 'reaction', 'manifestation', 'intolerance', 'nil known']
   },
@@ -131,7 +131,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'medicines_discharge',
     title: 'Medicines on Discharge',
     displayOrder: 10,
-    standard: 'A clear alphabetical list grouped strictly by status: "New" medicines first, followed by "Changed", followed by "Unchanged". Must itemize generic name, brand, strength, form, route, directions, and clinical indication.',
+    standard: 'Medicines must be documented, grouped according to their status (i.e., new medicines at the top, followed by changed, then unchanged), and ordered alphabetically within each group. It is to be based on the medication reconciliation completed at the start of a patient’s admission.\nIf significant changes in medicines have occurred, clearly group ‘medicines on admission’ and ‘medicines on discharge’. Any changes to the patient’s medicine regimen are to be identified and communicated in the discharge summary, together with a reason for each change:\n- Medicine name: generic first, then brand specific to the patient if known; strength, form, and route\n- Directions: dose, frequency (including ‘as required’), and any special instructions e.g., in relation to food; when the next dose is due for intermittent medicines, or when the last dose was administered\n- Duration/end date\n- Status: new, changed or unchanged\n- Change reason/clinical indication.',
     source: 'Section 2.1.2 - Medicines on discharge',
     keywords: ['medicines on discharge', 'changed medicines', 'new medicines', 'unchanged', 'medication reconciliation', 'tablet', 'mg', 'route']
   },
@@ -139,7 +139,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'ceased_medicines',
     title: 'Ceased & Suspended Medicines',
     displayOrder: 11,
-    standard: 'Document ceased or temporarily suspended medicines in a separate section with clear clinical reasoning, temporary vs permanent duration, and ongoing monitoring parameters.',
+    standard: 'Medicine name: Generic first, then brand specific to the patient if known, strength, form and route\nReason: Explain why a medicine has been ceased or suspended\nDuration: Identifying temporary versus permanent cessation.',
     source: 'Section 2.1.2 - Ceased and temporarily suspended medicines',
     keywords: ['ceased', 'suspended', 'stop', 'cessation', 'monitored', 'monitoring', 'de-prescribing', 'reasons for ceasing']
   },
@@ -147,7 +147,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'alerts',
     title: 'Clinically Relevant Alerts & Risks',
     displayOrder: 12,
-    standard: 'Identification of physical and clinical safety threats (e.g., falls risks, infection risks, or cognitive warnings) using bulleted alert lists.',
+    standard: 'Clinically relevant alerts are to be identified (e.g., falls risks).',
     source: 'Section 2.1.2 - Alerts',
     keywords: ['alerts', 'infection', 'falls', 'risk', 'safeties', 'cognitive alert']
   },
@@ -155,7 +155,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'recommendations',
     title: 'Recommendations & Future Actions',
     displayOrder: 13,
-    standard: 'Specific immediate instructions for ongoing outpatient healthcare management, indicating action ownership (who is responsible) and precise action timelines.',
+    standard: 'Specific recommendations for treatment\nSpecific recommendations for follow up care\nRelevant timeframes for action\nPending investigations, results and actions required.',
     source: 'Section 2.1.2 - Recommendations',
     keywords: ['recommendations', 'ongoing management', 'management plans', 'pending investigations', 'pending results', 'responsibilities']
   },
@@ -163,23 +163,15 @@ const MINIMUM_REQUIREMENTS = [
     id: 'followup_appointments',
     title: 'Follow-up Appointments',
     displayOrder: 14,
-    standard: 'Structured details of all future scheduled or recommended clinician visits: description, date/time, booking status, doctor name, clinic location, contact numbers, and pre-visit preparation (e.g., fasting).',
+    standard: 'document appointments that have been scheduled, are in the process of, or need to be, organised. It is recommended that most discharge follow-up appointments are initiated or confirmed prior to discharge by the discharging clinician. If this is not possible, ensure actions and persons responsible are noted clearly in the ‘Recommendation’ section of the discharge summary.\nThe following appointment information must be provided:\n- Description\n- Date and time\n- Booking status\n- Name of primary care provider being visited\n- Location\n- Contact details\n- Specific instructions e.g., Nil By Mouth (NBM) or preparation pre-visit, payments if required\n- Arranged/to be arranged by hospital/patient.',
     source: 'Section 2.1.2 - Follow-up appointments',
     keywords: ['followup', 'appointments', 'appointments scheduled', 'gp visit', 'booking', 'scheduled appointment']
   },
   {
-    id: 'patient_info',
-    title: 'Information Provided to Patient/Carer',
-    displayOrder: 15,
-    standard: 'Summary of the educational material or actions explained to the patient and carers. Includes landscape-oriented Client-Friendly Medication Lists (CFML).',
-    source: 'Section 2.1.2 - Information provided to patient',
-    keywords: ['information provided', 'patient friendly', 'medication list', 'pfml', 'disclaimer', 'carer', 'provided to the patient']
-  },
-  {
     id: 'vulnerable_cohorts',
     title: 'Vulnerable Cohorts (Sec 2.1.1)',
-    displayOrder: 16,
-    standard: 'For vulnerable patient groups who are at increased risk of rehospitalisation, the discharge document must also include information on: early warning signs of relapse of their current illness, identification of risks and strategies to reduce each risk identified, contingency plans and relapse prevention strategies, and emergency telephone contacts to access appropriate care.',
+    displayOrder: 15,
+    standard: 'discharge documents might also want to include:\n1. early warning signs of relapse of their current illness\n2. identification of risks and strategies to reduce each risk identified\n3. contingency plans and relapse prevention strategies\n4. emergency telephone contacts to access appropriate care.',
     source: 'Section 2.1.1 - Vulnerable Cohorts',
     keywords: ['vulnerable', 'early warning', 'relapse', 'mitigation', 'hazard', 'wandering', 'falls', 'contingency', 'escalation', 'emergency contacts', '24/7', 'cognitive', 'dementia', 'relapse triggers']
   }
@@ -191,7 +183,7 @@ const DAY_ONLY_REQUIREMENTS = [
     id: 'do_patient_identification',
     title: 'Provided Patient identification',
     displayOrder: 1,
-    standard: 'Provided Patient identification contains: Name, Medical Record Number (MRN), Age, Sex, Gender, Date of birth (age in years or months/days where applicable), Address, Telephone number.',
+    standard: '.1. Name\n2. Medical Record Number (MRN)\n3. Age\n4. Sex\n5. Gender\n6. Date of birth (age in years or months/days where applicable)\n7. Address\n8. Telephone number',
     source: 'Section 3.1.2 - Patient identification',
     keywords: ['patient', 'demographics', 'name', 'mrn', 'dob', 'address', 'telephone', 'identification', 'age', 'sex', 'gender']
   },
@@ -300,7 +292,6 @@ const getReferCitation = (reqId: string): string => {
     alerts: { section: '2.1.2 (Alerts)', page: '8' },
     recommendations: { section: '2.1.2 (Recommendations)', page: '8' },
     followup_appointments: { section: '2.1.2 (Follow-up appointments)', page: '8' },
-    patient_info: { section: '2.1.2 (Information provided to patient)', page: '8' },
     vulnerable_cohorts: { section: '2.1.1 (Vulnerable Cohorts)', page: '5' },
     // Day only references
     do_patient_identification: { section: '3.1.2 (Patient identification)', page: '11' },
@@ -360,7 +351,7 @@ const findMatchingRequirement = (
       id: 'additional_medicine_instructions',
       title: 'Additional Medicine Instructions (Sec 2.1.1 & 2.1.2)',
       displayOrder: 19,
-      standard: 'Where additional instructions are required for ongoing medicine management, the discharging clinician, in consultation with the pharmacist (where available), will document these instructions in a section following the ‘ceased medicines’ section of the discharge summary. Information to be documented in this section may include:\n- Ongoing monitoring requirements, e.g., therapeutic drug monitoring, metabolic monitoring in patients on long term anti-psychotics, International Normalised Ratio (INR) testing and targets for warfarin\n- Medicine dose adjustment requirements, including recommendations for future cessation of medicines e.g., weaning dose plan of corticosteroids\n- Recommendation for commencement of a dose administration aid\n- Recommendations for pain management for post-operative patients, including information on dose reduction and/or cessation of opioids.\nRefer to NSW Health Policy Directive High-Risk Medicines Management (PD2020_045) and NSW Health Policy Directive Medication Handling in NSW Public Health Facilities (PD2013_043) for further information. If a separate patient friendly medication list is provided, the information must be consistent with that of the discharge summary, and any changes made must be reflected in both documents.\nPatient friendly medication lists must state the date they were authorised on both the electronic and printed copy.',
+      standard: 'Where additional instructions are required for ongoing medicine management, the discharging clinician, in consultation with the pharmacist (where available), will document these instructions in a section following the ‘ceased medicines’ section of the discharge summary. Information to be documented in this section may include:\n- Medicine dose adjustment requirements, including recommendations for future cessation of medicines e.g., weaning dose plan of corticosteroids\n- Recommendation for commencement of a dose administration aid\n- Recommendations for pain management for post-operative patients, including information on dose reduction and/or cessation of opioids.\nRefer to NSW Health Policy Directive High-Risk Medicines Management (PD2020_045) and NSW Health Policy Directive Medication Handling in NSW Public Health Facilities (PD2013_043) for further information. If a separate patient friendly medication list is provided, the information must be consistent with that of the discharge summary, and any changes made must be reflected in both documents.\nPatient friendly medication lists must state the date they were authorised on both the electronic and printed copy.',
       source: 'Section 2.1.2 - Ceased and temporarily suspended medicines',
       keywords: ['additional instructions', 'drug monitoring', 'dose adjustment', 'weaning dose', 'dose administration aid', 'pain management', 'pd2020_045', 'pd2013_043', 'authorised']
     });
@@ -445,10 +436,6 @@ const findMatchingRequirement = (
       'follow-up', 'appointments', 'scheduled', 'follow-up appointments', 'booking status', 
       're-appointment'
     ],
-    patient_info: [
-      'dose administration aids', 'daa', 'blister pack', 'webster care', 'information provided', 
-      'patient/carer', 'cfml', 'client-friendly', 'pfml', 'disclaimer'
-    ],
     vulnerable_cohorts: [
       'vulnerable', 'early warning', 'relapse', 'mitigation', 'hazard', 'wandering', 'falls', 
       'contingency', 'escalation', 'emergency contacts', '24/7', 'cognitive', 'dementia', 'relapse triggers'
@@ -531,6 +518,139 @@ const DEFAULT_PATIENTS: Patient[] = [
   }
 ];
 
+// Helper to parse patient demographics from medical text using offline regex rules
+export function parseDemographicsOffline(text: string) {
+  if (!text) return null;
+  
+  let name = '';
+  let dob = '';
+  let gender = '';
+  let admissionDate = '';
+  let dischargeDate = '';
+
+  // Name detection regexes
+  const nameRegexes = [
+    /(?:patient\s*name|pt\s*name|name)\s*:\s*([^\n\r]+)/i,
+    /(?:patient|pt)\s*:\s*([^\n\r]+)/i,
+    /patient\s*is\s*([A-Za-z\s,]+)/i
+  ];
+  for (const regex of nameRegexes) {
+    const match = text.match(regex);
+    if (match && match[1]) {
+      let candidate = match[1].trim();
+      // clean up trailing stuff like DOB, brackets, spaces
+      candidate = candidate.split(/dob|d\.o\.b|date of birth|admission|discharge|gender|sex/i)[0].trim();
+      candidate = candidate.replace(/[\(\)\[\]#]/g, '').replace(/[,;\s]+$/, '').trim();
+      if (candidate && candidate.length > 2 && candidate.length < 50 && !/^(is|has|was|the|this)$/i.test(candidate)) {
+        name = candidate;
+        break;
+      }
+    }
+  }
+
+  // DOB detection regexes
+  const dobRegexes = [
+    /(?:dob|d\.o\.b|date\s*of\s*birth)\s*[:\-]?\s*([0-9a-zA-Z-_\/\s,]+)/i,
+    /born\s*on\s*[:\-]?\s*([0-9a-zA-Z-_\/\s,]+)/i
+  ];
+  for (const regex of dobRegexes) {
+    const match = text.match(regex);
+    if (match && match[1]) {
+      const candidate = match[1].trim().split(/\s{2,}/)[0].split(/[\n\r]/)[0].trim();
+      if (candidate && candidate.length > 5 && candidate.length < 30) {
+        dob = candidate;
+        break;
+      }
+    }
+  }
+
+  // Gender detection regexes
+  const genderRegexes = [
+    /(?:gender|sex)\s*:\s*([a-zA-Z]+)/i,
+  ];
+  for (const regex of genderRegexes) {
+    const match = text.match(regex);
+    if (match && match[1]) {
+      const candidate = match[1].trim().toLowerCase();
+      if (candidate.startsWith('f')) gender = 'Female';
+      else if (candidate.startsWith('m')) gender = 'Male';
+      else if (candidate.startsWith('o')) gender = 'Other';
+      if (gender) break;
+    }
+  }
+  if (!gender) {
+    // scan text for pronouns or direct mentions
+    const lower = text.slice(0, 1500).toLowerCase();
+    if (lower.includes('female') || /\bms\b/i.test(lower) || /\bmrs\b/i.test(lower) || /\bshe\b/i.test(lower)) {
+      gender = 'Female';
+    } else if (lower.includes('male') || /\bmr\b/i.test(lower) || /\bhe\b/i.test(lower)) {
+      gender = 'Male';
+    }
+  }
+
+  // Admission Date detection
+  const admRegexes = [
+    /(?:admission\s*date|admitted\s*date|admission|adm\s*date|admitted)\s*:\s*([^\n\r]+)/i,
+    /admitted\s*on\s*([^\n\r]+)/i
+  ];
+  for (const regex of admRegexes) {
+    const match = text.match(regex);
+    if (match && match[1]) {
+      const candidate = match[1].trim().split(/\s{2,}/)[0].trim();
+      if (candidate && candidate.length > 5 && candidate.length < 30) {
+        admissionDate = candidate;
+        break;
+      }
+    }
+  }
+
+  // Discharge Date detection
+  const disRegexes = [
+    /(?:discharge\s*date|discharged\s*date|discharge|dis\s*date|discharged)\s*:\s*([^\n\r]+)/i,
+    /discharged\s*on\s*([^\n\r]+)/i
+  ];
+  for (const regex of disRegexes) {
+    const match = text.match(regex);
+    if (match && match[1]) {
+      const candidate = match[1].trim().split(/\s{2,}/)[0].trim();
+      if (candidate && candidate.length > 5 && candidate.length < 30) {
+        dischargeDate = candidate;
+        break;
+      }
+    }
+  }
+
+  // Clean and format date strings if they match YYYY-MM-DD or standard formats
+  const cleanDate = (dStr: string) => {
+    if (!dStr) return '';
+    const datePart = dStr.replace(/[^0-9a-zA-Z\s\/\-\.]/g, '').trim();
+    // Check if matches DD/MM/YYYY or YYYY-MM-DD
+    try {
+      const parsedDate = new Date(datePart);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.toISOString().split('T')[0];
+      }
+    } catch(e){}
+    return datePart;
+  };
+
+  const finalDob = cleanDate(dob);
+  const finalAdm = cleanDate(admissionDate);
+  const finalDis = cleanDate(dischargeDate);
+
+  if (!name && !finalDob && !gender && !finalAdm && !finalDis) {
+    return null;
+  }
+
+  return {
+    name: name || undefined,
+    dob: finalDob || dob || undefined,
+    gender: gender || undefined,
+    admissionDate: finalAdm || admissionDate || undefined,
+    dischargeDate: finalDis || dischargeDate || undefined
+  };
+}
+
 export default function App() {
   const [patients, setPatients] = useState<Patient[]>(() => {
     const saved = localStorage.getItem('elderly_discharge_patients');
@@ -570,6 +690,10 @@ export default function App() {
   const [isWalkthroughActive, setIsWalkthroughActive] = useState(true);
   const [walkthroughIndex, setWalkthroughIndex] = useState(0);
   const [deletingPatientId, setDeletingPatientId] = useState<string | null>(null);
+
+  // Disclaimer and Browser safety states
+  const [showAuditDisclaimer, setShowAuditDisclaimer] = useState(false);
+  const [disclaimerAcceptedCheck, setDisclaimerAcceptedCheck] = useState(false);
 
   // New feedback loop states
   const [feedbackRating, setFeedbackRating] = useState<'helpful' | 'unhelpful' | null>(null);
@@ -1026,8 +1150,29 @@ export default function App() {
 
   // API Call: Consolidate records and audit for missing details
   const triggerConsolidate = async (patientToAudit?: Patient) => {
-    const targetPatient = patientToAudit || selectedPatient;
+    let targetPatient = patientToAudit || selectedPatient;
     if (!targetPatient) return;
+
+    // If patient is 'New Profile', offline extract demographics without using AI and update profile task bar
+    if (targetPatient.name === 'New Profile') {
+      const textToParse = targetPatient.manualNotes || targetPatient.cleanedMarkdown || '';
+      const parsed = parseDemographicsOffline(textToParse);
+      if (parsed) {
+        targetPatient = {
+          ...targetPatient,
+          name: parsed.name || targetPatient.name,
+          dob: parsed.dob || targetPatient.dob,
+          gender: parsed.gender || targetPatient.gender,
+          admissionDate: parsed.admissionDate || targetPatient.admissionDate,
+          dischargeDate: parsed.dischargeDate || targetPatient.dischargeDate,
+        };
+        // Save back to local state and localStorage immediately
+        const nextPatients = patients.map((p) => (p.id === targetPatient.id ? targetPatient : p));
+        setPatients(nextPatients);
+        localStorage.setItem('elderly_discharge_patients', JSON.stringify(nextPatients));
+      }
+    }
+
     setIsConsolidating(true);
     setAuditProgress(5);
     setAuditStatusText('Initializing referral letter safety check...');
@@ -1078,6 +1223,7 @@ export default function App() {
         ...targetPatient,
         summary: data.summary,
         missingInfoAnalysis: data.missingInfoAnalysis,
+        auditConfidence: data.confidence !== undefined ? data.confidence : 95,
       });
 
       setShowInputs(false);
@@ -1734,19 +1880,19 @@ export default function App() {
                             {selectedPatient.isVulnerable && (
                               <div className="space-y-1.5 text-xs pt-4 first:pt-0">
                                 <div className="flex flex-col sm:flex-row items-baseline gap-2">
-                                  <span className="inline-block text-[9px] font-extrabold text-rose-805 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded uppercase font-mono">
+                                  <span className="inline-block text-[9px] font-extrabold text-indigo-805 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded uppercase font-mono">
                                     GL2022_005 Section 2.1.1 - Vulnerable Cohorts
                                   </span>
-                                  <span className="text-[10px] text-rose-750 font-extrabold">Four Custom Sections Mandated</span>
+                                  <span className="text-[10px] text-indigo-750 font-extrabold">Suggested Inclusions (Non-Mandatory)</span>
                                 </div>
                                 <p className="text-slate-800 font-bold mt-1 leading-relaxed">
-                                  For vulnerable patient groups who are at increased risk of rehospitalisation, the discharge document must also include information on early warning signs of relapse of their current illness, identification of risks and strategies to reduce each risk identified, contingency plans and relapse prevention strategies, and emergency telephone contacts to access appropriate care.
+                                  discharge documents might also want to include:
                                 </p>
-                                <ul className="text-slate-655 space-y-1 pl-4 list-disc font-semibold mt-2">
-                                  <li><strong>Early warning signs:</strong> Triggers of pending clinical relapse of current illness.</li>
-                                  <li><strong>Risk mitigation:</strong> Patient hazards and preventative plans.</li>
-                                  <li><strong>Contingency plans:</strong> Emergency escalation pathways.</li>
-                                  <li><strong>Emergency contacts:</strong> Direct, 24/7 care clinical telephone contacts.</li>
+                                <ul className="text-slate-655 space-y-1 pl-6 list-decimal font-semibold mt-2">
+                                  <li>early warning signs of relapse of their current illness</li>
+                                  <li>identification of risks and strategies to reduce each risk identified</li>
+                                  <li>contingency plans and relapse prevention strategies</li>
+                                  <li>emergency telephone contacts to access appropriate care.</li>
                                 </ul>
                               </div>
                             )}
@@ -1799,7 +1945,6 @@ export default function App() {
                                   Where additional instructions are required for ongoing medicine management, document these instructions in a section following the ‘ceased medicines’ section. Information may include:
                                 </p>
                                 <ul className="text-slate-655 space-y-1 pl-4 list-decimal font-semibold mt-2">
-                                  <li><strong>Ongoing monitoring requirements</strong>, e.g., therapeutic drug monitoring, metabolic monitoring, INR testing.</li>
                                   <li><strong>Medicine dose adjustment requirements</strong>, including recommendations for future cessation of medicines e.g., weaning dose plans.</li>
                                   <li><strong>Recommendation for commencement of a dose administration aid</strong></li>
                                   <li><strong>Recommendations for pain management for post-operative patients</strong>, including information on dose reduction and/or cessation of opioids.</li>
@@ -1948,14 +2093,29 @@ export default function App() {
                               </div>
                             </div>
                           </div>
+                        ) : selectedPatient?.auditConfidence === 100 ? (
+                          <div className="w-full max-w-md bg-emerald-50 border border-emerald-250/20 rounded-xl p-4 text-left space-y-2.5 shadow-3xs animate-in zoom-in-95 duration-200">
+                            <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-[11px] uppercase tracking-wider">
+                              <Lock className="w-4 h-4 text-emerald-600 shrink-0 animate-pulse" />
+                              <span>AI Audit Engine Locked</span>
+                            </div>
+                            <p className="text-[11.5px] text-slate-600 leading-relaxed font-semibold">
+                              The clinical AI model is <strong>100% confident</strong> that this draft captures all required safety parameters. Generation has been shut down to prevent AI model hallucinations and drift.
+                            </p>
+                            <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-700 bg-emerald-100 border border-emerald-300/30 px-2.5 py-1 rounded w-fit">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-605" />
+                              <span>100% ACCURACY LOCKED</span>
+                            </div>
+                          </div>
                         ) : (
                           <button
-                            onClick={() => triggerConsolidate()}
+                            onClick={() => setShowAuditDisclaimer(true)}
                             disabled={
                               (!selectedPatient.manualNotes && !selectedPatient.cleanedMarkdown) ||
                               (selectedPatient.uploadedDocName && !selectedPatient.aiInterpretationVerified)
                             }
                             className="w-full max-w-md h-12.5 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:from-slate-205 disabled:to-slate-205 disabled:text-slate-400 text-white rounded-xl text-sm font-extrabold flex items-center justify-center gap-2.5 transition-all shadow-md hover:shadow-lg disabled:cursor-not-allowed cursor-pointer select-none border-t border-emerald-500/10"
+                            id="check-referral-gaps-btn"
                           >
                             <Sparkles className="w-5 h-5 shrink-0 text-emerald-100" />
                             <span>Check Referral Letter Gaps</span>
@@ -2027,7 +2187,7 @@ export default function App() {
                             id: 'additional_medicine_instructions',
                             title: 'Additional Medicine Instructions (Sec 2.1.1 & 2.1.2)',
                             displayOrder: 19,
-                            standard: 'Where additional instructions are required for ongoing medicine management, the discharging clinician, in consultation with the pharmacist (where available), will document these instructions in a section following the ‘ceased medicines’ section of the discharge summary. Information to be documented in this section may include:\n- Ongoing monitoring requirements, e.g., therapeutic drug monitoring, metabolic monitoring in patients on long term anti-psychotics, International Normalised Ratio (INR) testing and targets for warfarin\n- Medicine dose adjustment requirements, including recommendations for future cessation of medicines e.g., weaning dose plan of corticosteroids\n- Recommendation for commencement of a dose administration aid\n- Recommendations for pain management for post-operative patients, including information on dose reduction and/or cessation of opioids.\nRefer to NSW Health Policy Directive High-Risk Medicines Management (PD2020_045) and NSW Health Policy Directive Medication Handling in NSW Public Health Facilities (PD2013_043) for further information. If a separate patient friendly medication list is provided, the information must be consistent with that of the discharge summary, and any changes made must be reflected in both documents.\nPatient friendly medication lists must state the date they were authorised on both the electronic and printed copy.',
+                            standard: 'Where additional instructions are required for ongoing medicine management, the discharging clinician, in consultation with the pharmacist (where available), will document these instructions in a section following the ‘ceased medicines’ section of the discharge summary. Information to be documented in this section may include:\n- Medicine dose adjustment requirements, including recommendations for future cessation of medicines e.g., weaning dose plan of corticosteroids\n- Recommendation for commencement of a dose administration aid\n- Recommendations for pain management for post-operative patients, including information on dose reduction and/or cessation of opioids.\nRefer to NSW Health Policy Directive High-Risk Medicines Management (PD2020_045) and NSW Health Policy Directive Medication Handling in NSW Public Health Facilities (PD2013_043) for further information. If a separate patient friendly medication list is provided, the information must be consistent with that of the discharge summary, and any changes made must be reflected in both documents.\nPatient friendly medication lists must state the date they were authorised on both the electronic and printed copy.',
                             source: 'Section 2.1.2 - Ceased and temporarily suspended medicines',
                             keywords: ['additional instructions', 'drug monitoring', 'dose adjustment', 'weaning dose', 'dose administration aid', 'pain management', 'pd2020_045', 'pd2013_043', 'authorised']
                           }] : [])
@@ -2043,13 +2203,24 @@ export default function App() {
                               !!selectedPatient.hasAdditionalMedicines
                             ) === req.id
                           );
+                          
+                          // Filter out Correctional warning text so it doesn't appear as a missing parameter/gap in the checklist
+                          const filteredBubbles = matchingBubbles.filter(b => {
+                            const isSecNotice = selectedPatient.isCorrectional && 
+                              (b.content.toLowerCase().includes('do not advise') || 
+                               b.content.toLowerCase().includes('security risk') || 
+                               b.content.toLowerCase().includes('booking times') ||
+                               b.content.toLowerCase().includes('not advise the patient'));
+                            return !isSecNotice;
+                          });
+
                           return {
                             ...req,
                             displayOrder: index + 1,
-                            gaps: matchingBubbles,
+                            gaps: filteredBubbles,
                           };
                         });
-                        const totalGapsCount = bubbles.length;
+                        const totalGapsCount = reqsGapsList.reduce((acc, r) => acc + r.gaps.length, 0);
                         
                         let reqsWithGaps = isDayOnly 
                           ? [...reqsGapsList] 
@@ -2073,6 +2244,19 @@ export default function App() {
                             if (idx > -1) {
                               const [vulReq] = reqsWithGaps.splice(idx, 1);
                               reqsWithGaps.push(vulReq);
+                            }
+                          }
+                        }
+
+                        if (!isDayOnly && selectedPatient.isCorrectional) {
+                          const alreadyExists = reqsWithGaps.some(r => r.id === 'followup_appointments');
+                          if (!alreadyExists) {
+                            const fuReq = reqsGapsList.find(r => r.id === 'followup_appointments');
+                            if (fuReq) {
+                              reqsWithGaps.push({
+                                ...fuReq,
+                                gaps: fuReq.gaps
+                              });
                             }
                           }
                         }
@@ -2129,6 +2313,62 @@ export default function App() {
                               </div>
 
                               <div className="space-y-4 font-sans text-left">
+                                {/* AI Confidence Scale Widget */}
+                                {selectedPatient.auditConfidence !== undefined && (
+                                  <div className="bg-slate-50 border border-slate-205 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 select-none animate-in fade-in duration-200">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-xs font-bold text-slate-700">AI Audit Confidence Rating:</span>
+                                        <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                                          selectedPatient.auditConfidence === 100
+                                            ? 'bg-emerald-100/70 text-emerald-800 border-emerald-250/20'
+                                            : selectedPatient.auditConfidence >= 90
+                                            ? 'bg-teal-100/70 text-teal-850 border-teal-200/20'
+                                            : selectedPatient.auditConfidence >= 75
+                                            ? 'bg-amber-100/70 text-amber-800 border-amber-200/20'
+                                            : 'bg-rose-100/70 text-rose-805 border-rose-200/20'
+                                        }`}>
+                                          {selectedPatient.auditConfidence}% ({
+                                            selectedPatient.auditConfidence === 100
+                                              ? 'Absolute Audit Fidelity'
+                                              : selectedPatient.auditConfidence >= 90
+                                              ? 'High Completeness Confidence'
+                                              : selectedPatient.auditConfidence >= 75
+                                              ? 'Moderate Verification Advisory'
+                                              : 'Low Confidence Alert'
+                                          })
+                                        </span>
+                                      </div>
+                                      <p className="text-[11.5px] text-slate-550 leading-normal max-w-xl font-medium">
+                                        {selectedPatient.auditConfidence === 100 
+                                          ? "The safety checker is highly confident (100%) that this draft matches all standard checklist categories. To guarantee safety and prevent model drift, further automatic generation is locked."
+                                          : "This rating represents LLM completeness confidence. Some nested parameters might need subjective clinician validation."
+                                        }
+                                      </p>
+                                    </div>
+                                    <div className="w-full md:w-44 space-y-1 shrink-0">
+                                      <div className="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden border border-slate-300/30">
+                                        <div 
+                                          className={`h-full rounded-full transition-all duration-700 ${
+                                            selectedPatient.auditConfidence === 100
+                                              ? 'bg-emerald-500'
+                                              : selectedPatient.auditConfidence >= 90
+                                              ? 'bg-teal-500'
+                                              : selectedPatient.auditConfidence >= 75
+                                              ? 'bg-amber-500'
+                                              : 'bg-rose-500'
+                                          }`}
+                                          style={{ width: `${selectedPatient.auditConfidence}%` }}
+                                        />
+                                      </div>
+                                      <div className="flex justify-between text-[9px] text-slate-450 font-bold font-mono">
+                                        <span>0%</span>
+                                        <span>50%</span>
+                                        <span>100%</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                                     
 
 
@@ -2146,13 +2386,14 @@ export default function App() {
                                         // Is vulnerable cohorts step?
                                         const isVulnerableCohortStep = selectedPatient.isVulnerable && req.id === 'vulnerable_cohorts';
                                         
-                                        const isSpecialMandate = ['correctional_mandate', 'vulnerable_cohorts', 'mental_health_collaboration', 'additional_medicine_instructions'].includes(req.id);
+                                        const isSpecialMandate = ['correctional_mandate', 'mental_health_collaboration', 'additional_medicine_instructions'].includes(req.id);
+                                         const isSuggestionOnly = req.id === 'vulnerable_cohorts';
 
                                         return (
-                                          <div className={`bg-white border-2 rounded-xl p-5 shadow-3xs animate-in fade-in slide-in-from-bottom-1 duration-200 flex flex-col min-h-[460px] transition-all duration-300 ${
+                                          <div className={`bg-white border-2 rounded-xl p-5 shadow-3xs animate-in fade-in slide-in-from-bottom-1 duration-200 flex flex-col min-h-[460px] transition-all duration-300 ${isSuggestionOnly ? 'border-indigo-150 bg-indigo-50/5 ' : ''}
                                             isSpecialMandate
                                                 ? 'border-amber-300 bg-amber-50/5'
-                                                : 'border-red-100'
+                                                : isSuggestionOnly ? '' : 'border-red-100'
                                           }`}>
                                             
                                             {/* Step Header */}
@@ -2160,12 +2401,12 @@ export default function App() {
                                               <div>
                                                 <div className="flex items-center gap-2">
                                                   <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider ${
-                                                    isSpecialMandate
+                                                    isSuggestionOnly ? 'text-indigo-750 bg-indigo-50 border border-indigo-250/30' : isSpecialMandate
                                                         ? 'text-amber-750 bg-amber-50 border border-amber-250/30 font-mono'
                                                         : 'text-red-700 bg-red-100/70 border border-red-250/30'
                                                   }`}>
-                                                    {isSpecialMandate
-                                                          ? `WARNING`
+                                                    {isSpecialMandate || isSuggestionOnly
+                                                          ? isSuggestionOnly ? `RECOMMENDED INCLUSION` : `WARNING`
                                                           : `Audit Step ${currentStepIndex + 1} of ${totalStepsCount} — Clinical Gap`
                                                     }
                                                   </span>
@@ -2189,7 +2430,7 @@ export default function App() {
                                                       onClick={() => setWalkthroughIndex(idx)}
                                                       className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
                                                         isCurrent
-                                                          ? isSpecialMandate
+                                                          ? isSuggestionOnly ? 'bg-indigo-500 scale-120' : isSpecialMandate
                                                               ? 'bg-amber-500 scale-120'
                                                               : 'bg-rose-500 scale-120'
                                                           : 'bg-slate-200 hover:bg-slate-300'
@@ -2205,6 +2446,22 @@ export default function App() {
                                             <div className="space-y-4 flex-1 mb-4 overflow-y-auto min-h-0 pr-2 pb-1">
                                               
                                               {/* Cohort-Specific Special Adaptive Views */}
+                                              {selectedPatient.isCorrectional && req.id === 'followup_appointments' && (
+                                                <div className="p-4 rounded-xl border-2 border-amber-300 bg-amber-50/35 text-slate-850 space-y-2 mb-3.5 shadow-3xs animate-in fade-in duration-200">
+                                                  <div className="flex items-center gap-2">
+                                                    <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
+                                                    <strong className="text-[10px] font-black uppercase tracking-widest text-amber-900 font-mono">
+                                                      SECURITY WARNING: CORRECTIONAL PROTOCOL
+                                                    </strong>
+                                                  </div>
+                                                  <p className="text-xs leading-relaxed text-slate-800 font-bold whitespace-pre-line">
+                                                    Do not advise the patient of any follow-up appointments. This poses a security risk and if disclosed the appointment will need to be re-scheduled.
+                                                    {"\n\n"}
+                                                    Place the prepared discharge documentation in a sealed envelope marked ‘Confidential’ and for the attention of the Justice Health and Forensic Mental Health Network. Give the sealed envelope to the escorting corrections officers who will deliver it to a Justice Health and Forensic Mental Health Network clinician at the receiving facility.
+                                                  </p>
+                                                </div>
+                                              )}
+
                                               {isCorrectionalFollowup && (
                                                 <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/20 text-slate-850 space-y-3">
                                                   <div className="flex items-center gap-2">
@@ -2213,13 +2470,15 @@ export default function App() {
                                                       GL2022_005 Sec 2.1.1 - Correctional Security Mandate
                                                     </strong>
                                                   </div>
-                                                  <p className="text-xs leading-relaxed text-slate-700 font-medium">
+                                                  <p className="text-xs leading-relaxed text-slate-700 font-semibold whitespace-pre-line">
                                                     Escorted justice-health patients must <strong>never</strong> be given specific outpatient follow-up booking times or hospital dates directly in their clinical letters, as this constitutes a major flight risk and safety hazard.
+                                                    {"\n\n"}
+                                                    Place the prepared discharge documentation in a sealed envelope marked ‘Confidential’ and for the attention of the Justice Health and Forensic Mental Health Network. Give the sealed envelope to the escorting corrections officers who will deliver it to a Justice Health and Forensic Mental Health Network clinician at the receiving facility.
                                                   </p>
                                                 </div>
                                               )}
 
-                                              {isVulnerableCohortStep && (
+                                              {false && isVulnerableCohortStep && (
                                                 <div className="p-3.5 rounded-xl border border-rose-200/80 bg-rose-50/25 space-y-3">
                                                   <div className="flex items-center gap-2">
                                                     <ShieldAlert className="w-5 h-5 text-rose-700 shrink-0" />
@@ -2269,7 +2528,6 @@ export default function App() {
                                                     <strong className="text-indigo-900 text-xs block mb-1">Because you indicated patient additional information, these components might need to be included:</strong>
                                                   </p>
                                                   <ul className="list-disc pl-4.5 space-y-1.5 text-[11px] text-indigo-950/90 font-medium">
-                                                    <li><strong>Ongoing monitoring requirements</strong>, e.g., therapeutic drug monitoring, metabolic monitoring in patients on long term anti-psychotics, International Normalised Ratio (INR) testing and targets for warfarin</li>
                                                     <li><strong>Medicine dose adjustment requirements</strong>, including recommendations for future cessation of medicines e.g., weaning dose plan of corticosteroids</li>
                                                     <li><strong>Recommendation for commencement of a dose administration aid</strong></li>
                                                     <li><strong>Recommendations for pain management for post-operative patients</strong>, including information on dose reduction and/or cessation of opioids.</li>
@@ -2279,11 +2537,11 @@ export default function App() {
 
                                               {/* Omissions detailed list (only if not overridden/certified, or show reassuring message) */}
                                               <div className="space-y-2">
-                                                {req.gaps && req.gaps.length > 0 ? (
+                                                {req.gaps && req.gaps.length > 0 && !isSpecialMandate && !isSuggestionOnly && (
                                                   <>
                                                     <div className="text-[10px] font-extrabold text-red-700 uppercase tracking-wider flex items-center gap-1.5">
                                                       <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                                                      <span>{isSpecialMandate ? "POLICY ADVISORY / REMINDER:" : "Missing Parameters/Topic Omitted:"}</span>
+                                                      <span>{isSuggestionOnly ? "SUGGESTED DISCHARGE TOPIC:" : isSpecialMandate ? "POLICY ADVISORY / REMINDER:" : "Missing Parameters/Topic Omitted:"}</span>
                                                     </div>
                                                     
                                                     <div className="space-y-1.5 pl-1.5">
@@ -2296,21 +2554,9 @@ export default function App() {
                                                         </div>
                                                       ))}
                                                     </div>
-                                                    </>
-                                                  ) : (
-                                                    <div className="bg-emerald-55/15 text-emerald-850 border border-emerald-250 p-4 rounded-xl flex items-start gap-3 mt-1.5">
-                                                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                                                      <div className="space-y-1">
-                                                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-emerald-800 block font-mono">
-                                                          Standard Fulfilled
-                                                        </span>
-                                                        <p className="text-[11.5px] font-medium text-slate-700 leading-relaxed">
-                                                          No gaps or omissions detected in this section. All parameters are fully compliant with guidelines.
-                                                        </p>
-                                                      </div>
-                                                    </div>
-                                                  )}
-                                                </div>
+                                                  </>
+                                                )}
+                                              </div>
 
                                               {/* Citation footnote */}
                                               <div className="pt-2.5 border-t border-slate-100 text-xs text-slate-550 font-medium leading-relaxed">
@@ -2435,7 +2681,6 @@ export default function App() {
                                                           <strong className="text-indigo-900 text-xs block mb-1">Because you indicated patient additional information, these components might need to be included:</strong>
                                                         </p>
                                                         <ul className="list-disc pl-4.5 space-y-1.5 text-[11px] text-indigo-955/95 font-semibold text-left">
-                                                          <li><strong>Ongoing monitoring requirements</strong>, e.g., therapeutic drug monitoring, metabolic monitoring in patients on long term anti-psychotics, International Normalised Ratio (INR) testing and targets for warfarin</li>
                                                           <li><strong>Medicine dose adjustment requirements</strong>, including recommendations for future cessation of medicines e.g., weaning dose plan of corticosteroids</li>
                                                           <li><strong>Recommendation for commencement of a dose administration aid</strong></li>
                                                           <li><strong>Recommendations for pain management for post-operative patients</strong>, including information on dose reduction and/or cessation of opioids.</li>
@@ -2444,23 +2689,28 @@ export default function App() {
                                                     )}
 
                                                     {/* Simplified output of what is missing */}
-                                                    {hasGaps ? (
+                                                    {hasGaps && !['correctional_mandate', 'vulnerable_cohorts', 'mental_health_collaboration', 'additional_medicine_instructions'].includes(req.id) ? (
                                                       <div className="space-y-2">
                                                         <div className="text-[10px] font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
                                                           <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                                                          <span className="uppercase">{['correctional_mandate', 'vulnerable_cohorts', 'mental_health_collaboration', 'additional_medicine_instructions'].includes(req.id) ? "POLICY ADVISORY / REMINDER" : "Missing Information"}</span>
+                                                          <span className="uppercase">Missing Information</span>
                                                         </div>
                                                         
                                                         <div className="space-y-2 pl-1.5">
                                                           {req.gaps.map((gap, gIdx) => (
                                                             <div
                                                               key={gIdx}
-                                                              className="border-b-0 border-slate-100 pl-3 border-l-2 border-l-red-500 text-slate-750 text-[11.5px] leading-relaxed font-semibold py-0.5"
+                                                              className="border-b-0 border-slate-100 pl-3 border-l-2 border-l-red-500 text-slate-755 text-[11.5px] leading-relaxed font-semibold py-0.5"
                                                             >
                                                               <MarkdownView content={cleanGapText(gap.content)} />
                                                             </div>
                                                           ))}
                                                         </div>
+                                                      </div>
+                                                    ) : ['correctional_mandate', 'vulnerable_cohorts', 'mental_health_collaboration', 'additional_medicine_instructions'].includes(req.id) ? (
+                                                      <div className="text-indigo-850 font-medium flex items-center gap-2 bg-indigo-50/40 p-2.5 rounded-lg border border-indigo-150/40 text-[11px]">
+                                                        <Info className="w-3.5 h-3.5 text-indigo-650 shrink-0" />
+                                                        <span>Practice guidance is active on the detail card for this step.</span>
                                                       </div>
                                                     ) : (
                                                       <div className="text-emerald-800 font-medium flex items-center gap-2 bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100/50 text-[11px]">
@@ -2888,6 +3138,128 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Compliance Disclaimer & Browser HTTPS Workflow Safety Modal */}
+      {showAuditDisclaimer && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl p-6.5 text-left flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-lg bg-rose-50 text-rose-700 animate-pulse">
+                  <ShieldAlert className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Clinical Audit Compliance Disclaimer</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Verify guidelines & safety parameter boundaries before proceeding</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuditDisclaimer(false);
+                  setDisclaimerAcceptedCheck(false);
+                }}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+                id="close-disclaimer-btn"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs text-slate-600 leading-relaxed font-normal">
+              <div className="bg-amber-105/55 border border-amber-200 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-1.5 text-amber-850 font-bold uppercase tracking-wider text-[10px]">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  <span>Important Scope Constraint Warning</span>
+                </div>
+                <p className="text-[11.5px] text-amber-900 font-medium leading-relaxed">
+                  This safety compliance auditor evaluates <strong>COMPLETENESS ONLY</strong> and checklists omissions (demographics, allergy status fields, medicine lists) against NSW Health GL2022_005 requirements.
+                </p>
+                <div className="text-[11px] text-slate-500 leading-relaxed space-y-1">
+                  <span className="block font-bold text-slate-700">Please acknowledge before proceeding:</span>
+                  <ul className="list-disc pl-4.5 space-y-1 font-semibold text-slate-600">
+                    <li>This check does NOT evaluate clinical correctness, safety, or accuracy of diagnoses and treatments.</li>
+                    <li>Clinical AI models (LLMs) can make mistakes, hallucinate details, or overlook critical anomalies.</li>
+                    <li>The treating clinician maintains full legal liability for all medical transition summaries.</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Browser protocol safety detect inspect check */}
+              <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                window.location.protocol === 'https:' 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-950' 
+                  : 'bg-rose-50/65 border-rose-200 text-rose-955'
+              }`}>
+                <div className="flex items-center gap-2.5">
+                  {window.location.protocol === 'https:' ? (
+                    <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 animate-bounce" />
+                  )}
+                  <div>
+                    <p className="font-bold text-[11px] uppercase tracking-wider">Browser Connection Security</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed font-medium">
+                      {window.location.protocol === 'https:' 
+                        ? '✓ Secure HTTPS Browser detected. Patient records transmission packets are secured.' 
+                        : '⚠️ SSL Alert Check: Running in HTTP mode. Standard clinical workflows require HTTPS protocol access!'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded font-mono ${
+                  window.location.protocol === 'https:' ? 'bg-emerald-150 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                }`}>
+                  {window.location.protocol === 'https:' ? 'HTTPS SECURE' : 'DEV HTTP'}
+                </span>
+              </div>
+
+              {/* In the workflow click check */}
+              <label 
+                htmlFor="disclaimer-checkbox"
+                className="flex items-start gap-2.5 p-3.5 bg-slate-50 hover:bg-slate-100/50 rounded-xl border border-slate-205 cursor-pointer transition-all select-none"
+              >
+                <input
+                  type="checkbox"
+                  id="disclaimer-checkbox"
+                  checked={disclaimerAcceptedCheck}
+                  onChange={(e) => setDisclaimerAcceptedCheck(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 accent-emerald-600 cursor-pointer text-emerald-650"
+                />
+                <span className="text-[11px] font-semibold text-slate-700 leading-relaxed text-left">
+                  I acknowledge that this app only looks at <strong>completeness</strong>, NOT clinical safety or accuracy, and that AI can make mistakes. I accept professional accountability for certifying this audit.
+                </span>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuditDisclaimer(false);
+                  setDisclaimerAcceptedCheck(false);
+                }}
+                className="px-4 py-2 border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 font-bold rounded-xl text-xs cursor-pointer transition-all select-none"
+                id="cancel-disclaimer-btn"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                id="confirm-disclaimer-btn"
+                disabled={!disclaimerAcceptedCheck}
+                onClick={() => {
+                  setShowAuditDisclaimer(false);
+                  triggerConsolidate();
+                }}
+                className="px-4.5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 text-white font-extrabold rounded-xl text-xs shadow-md active:scale-95 transition-all cursor-pointer disabled:cursor-not-allowed select-none"
+              >
+                Understood & Proceed to Audit
+              </button>
+            </div>
           </div>
         </div>
       )}

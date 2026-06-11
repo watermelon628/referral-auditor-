@@ -21,6 +21,7 @@ export interface Patient {
   missingInfoAnalysis: string | null;
   patientLetter: string | null;
   electronicLetter: string | null;
+  auditConfidence?: number;
   aiInterpretationVerified?: boolean;
   isOutOfScope?: boolean;
   isMentalHealthInpatient?: boolean;

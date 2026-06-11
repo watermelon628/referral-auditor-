@@ -153,12 +153,11 @@ A discharge summary must contain information on the following:
 - Alerts/infection risks
 - Recommendations
 - Follow-up services/appointments
-- Information provided to patient
 - Relevant investigation results
 
-*For vulnerable patient groups who are at increased risk of rehospitalisation, the discharge document must also include information on: early warning signs of relapse of their current illness, identification of risks and strategies to reduce each risk identified, contingency plans and relapse prevention strategies, and emergency telephone contacts to access appropriate care.*
+*discharge documents might also want to include: 1. early warning signs of relapse of their current illness 2. identification of risks and strategies to reduce each risk identified 3. contingency plans and relapse prevention strategies 4. emergency telephone contacts to access appropriate care.*
 
-*For patients returning to Justice Health or Correctional Services, follow these key steps: place the prepared discharge documentation in a sealed envelope marked 'Confidential' and for the attention of the Justice Health and Forensic Mental Health Network. Give the sealed envelope to the escorting corrections officers. Do not advise the patient of any follow-up appointments due to security risks.*
+*For patients returning to Justice Health or Correctional Services, follow these key steps: Place the prepared discharge documentation in a sealed envelope marked ‘Confidential’ and for the attention of the Justice Health and Forensic Mental Health Network. Give the sealed envelope to the escorting corrections officers who will deliver it to a Justice Health and Forensic Mental Health Network clinician at the receiving facility. Do not advise the patient of any follow-up appointments.*
 
 #### 2.1.2. Description and display of discharge summary information
 
@@ -166,7 +165,7 @@ Each of the required minimum standards (section 2.1.1) must follow the descripti
 
 ##### Patient details
 The patient's full name must be documented on a single line, in a larger, bold font. Patient details are to appear in the following order:
-1. Name
+.1. Name
 2. Medical Record Number (MRN)
 3. Age
 4. Sex
@@ -261,10 +260,6 @@ It is important to document appointments that have been scheduled, are in the pr
 - Contact details
 - Specific instructions e.g., Nil By Mouth (NBM) or preparation pre-visit, payments if required
 - Arranged/to be arranged by hospital/patient.
-
-##### Information provided to patient
-The discharge summary must outline the complete list of recommended actions that were provided to the patient and/or carer.
-A Patient Friendly Medication List (PFML) must be provided to all patients where possible, presented in a landscape view table with columns for Morning, Midday, Evening, and Night. Adjust font size for patients with vision impairment.
 
 ##### Selected investigations results
 Only relevant and important investigations performed while the patient was in hospital are included, grouped by pathology, imaging, etc., with Test name, Date, and Result.

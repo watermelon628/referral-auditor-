@@ -15,7 +15,7 @@ interface CohortVerificationProps {
 export function CohortVerification({ patient, onUpdatePatient }: CohortVerificationProps) {
   const toggleCohort = (field: keyof Pick<Patient, 
     'isMentalHealthInpatient' | 'isEmergencyDepartment' | 'isOutpatientClinic' | 'isWellBabyObstetric' | 
-    'isDayOnly' | 'isVulnerable' | 'isCorrectional' | 'isMentalHealthDischargeNonMH' | 'hasAdditionalMedicines'
+    'isDayOnly' | 'isVulnerable' | 'isCorrectional' | 'hasAdditionalMedicines'
   >) => {
     // If we toggle on an excluded option, we can make sure any conflict is resolved safely
     onUpdatePatient({
@@ -35,7 +35,6 @@ export function CohortVerification({ patient, onUpdatePatient }: CohortVerificat
     patient.isDayOnly,
     patient.isVulnerable,
     patient.isCorrectional,
-    patient.isMentalHealthDischargeNonMH,
     patient.hasAdditionalMedicines
   ].filter(Boolean).length;
 
@@ -225,7 +224,7 @@ export function CohortVerification({ patient, onUpdatePatient }: CohortVerificat
             <div>
               <strong className="text-xs font-bold text-slate-800 block">Vulnerable Patients Group</strong>
               <span className="text-[10px] text-slate-400 mt-0.5 block leading-normal">
-                High hazard, cognitive issue, or readmission risk. Demands 4 custom relapse fields.
+                High hazard, cognitive issue, or readmission risk. Suggests 4 custom relapse/preventative fields.
               </span>
             </div>
           </button>
@@ -251,31 +250,6 @@ export function CohortVerification({ patient, onUpdatePatient }: CohortVerificat
               <strong className="text-xs font-bold text-slate-800 block">Correctional Custody Discharge</strong>
               <span className="text-[10px] text-slate-400 mt-0.5 block leading-normal">
                 Returning to Justice Health. Redact timings, secure documents in sealed envelopes.
-              </span>
-            </div>
-          </button>
-
-          {/* Mental health non-MH ward */}
-          <button
-            type="button"
-            onClick={() => toggleCohort('isMentalHealthDischargeNonMH')}
-            className={`flex items-start text-left gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-              patient.isMentalHealthDischargeNonMH 
-                ? 'bg-blue-50/15 border-blue-250 shadow-3xs' 
-                : 'bg-slate-50/40 border-slate-200 hover:border-slate-300 hover:bg-slate-50/80'
-            }`}
-          >
-            <div className="mt-0.5 shrink-0">
-              {patient.isMentalHealthDischargeNonMH ? (
-                <CheckSquare className="w-4 h-4 text-blue-600" />
-              ) : (
-                <Square className="w-4 h-4 text-slate-400" />
-              )}
-            </div>
-            <div>
-              <strong className="text-xs font-bold text-slate-800 block">MH Discharge from physical ward</strong>
-              <span className="text-[10px] text-slate-400 mt-0.5 block leading-normal">
-                General ward patients receiving mental health liasons. Requires mental health coordination.
               </span>
             </div>
           </button>
