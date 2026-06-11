@@ -199,14 +199,14 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
         id: 'patient_fields',
         title: 'Provided Patient identification',
         items: [
-          { name: '.1. Name', pattern: /\bname\b/ },
-          { name: '2. Medical Record Number (MRN)', pattern: /\bmrn\b|\bmedical record number/ },
-          { name: '3. Age', pattern: /\bage\b/ },
-          { name: '4. Sex', pattern: /\bsex\b/ },
-          { name: '5. Gender', pattern: /\bgender\b/ },
-          { name: '6. Date of birth (age in years or months/days where applicable)', pattern: /\bdob\b|date of birth/ },
-          { name: '7. Address', pattern: /\baddress\b|\bhome address/ },
-          { name: '8. Telephone number', pattern: /\bphone\b|telephone|phone number|contact\b/ }
+          { name: 'Name', pattern: /\bname\b/ },
+          { name: 'Medical Record Number (MRN)', pattern: /\bmrn\b|medical\s*record\s*number|hospital\s*no\b|ur\b|hospital\s*number|synthetic\s*mrn/i },
+          { name: 'Age', pattern: /\bage\b/ },
+          { name: 'Sex', pattern: /\bsex\b/ },
+          { name: 'Gender', pattern: /\bgender\b/ },
+          { name: 'Date of birth (age in years or months/days where applicable)', pattern: /\bdob\b|date of birth/ },
+          { name: 'Address', pattern: /\baddress\b|\bhome address/ },
+          { name: 'Telephone number', pattern: /\bphone\b|telephone|phone number|contact\b/ }
         ]
       },
       {
@@ -220,7 +220,7 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
         id: 'planned_procedure',
         title: 'Planned procedure',
         items: [
-          { name: 'Chronological invasive clinical interventions or Explicit "nil performed"', pattern: /procedure|operation|nil performed|intervention|invasive/ },
+          { name: 'Chronological invasive clinical interventions or Explicit "nil performed"', pattern: /procedur|operation|surgery|surgical|resection|fixation|repair|biopsy|excision|implant|nil\s*performed/i },
           { name: 'Medical device details (if implanted/explanted)', pattern: /device|implant|explant|model|batch/ }
         ]
       },
@@ -250,30 +250,28 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
         id: 'patient_fields',
         title: 'Patient details',
         items: [
-          { name: '.1. Name', pattern: /\bname\b/ },
-          { name: '2. Medical Record Number (MRN)', pattern: /\bmrn\b|\bmedical record number/ },
-          { name: '3. Age', pattern: /\bage\b/ },
-          { name: '4. Sex', pattern: /\bsex\b/ },
-          { name: '5. Gender', pattern: /\bgender\b/ },
-          { name: '6. Date of birth (age in years or months/days where applicable)', pattern: /\bdob\b|date of birth/ },
-          { name: '7. Address', pattern: /\baddress\b|\bhome address/ },
-          { name: '8. Telephone number', pattern: /\bphone\b|telephone|phone number|contact\b/ }
+          { name: 'Name', pattern: /\bname\b/ },
+          { name: 'Medical Record Number (MRN)', pattern: /\bmrn\b|medical\s*record\s*number|hospital\s*no\b|ur\b|hospital\s*number|synthetic\s*mrn/i },
+          { name: 'Age', pattern: /\bage\b/ },
+          { name: 'Sex', pattern: /\bsex\b/ },
+          { name: 'Gender', pattern: /\bgender\b/ },
+          { name: 'Date of birth (age in years or months/days where applicable)', pattern: /\bdob\b|date of birth/ },
+          { name: 'Address', pattern: /\baddress\b|\bhome address/ },
+          { name: 'Telephone number', pattern: /\bphone\b|telephone|phone number|contact\b/ }
         ]
       },
       {
         id: 'hospital_details',
         title: 'Hospital & Contact Details',
         items: [
-          { name: 'ospital name and Local Health District (districts)/Specialty Health Network (networks)', pattern: /hospital|local health district|lhd|specialty health network|shn|district/i },
-          { name: 'Hospital address and contact details including phone numbers', pattern: /address|phone|contact|telephone/i },
-          { name: 'Speciality name and nominated contact details including phone numbers.', pattern: /specialty|nominated contact|phone|unit/i }
+          { name: 'Hospital Name/LHD and at least one contact detail address, phone or specialty contact', pattern: /((?=.*(hospital|clinic|infirmary|sanatorium|facility|health\s+service|lhd|local\s+health\s+dist|ward))(?=.*(address|st\b|street|road|rd\b|ave\b|phone|tel\b|contact|\bph\b|fax|email|call|@|\d{4,15})))/i }
         ]
       },
       {
         id: 'gp_details',
         title: 'GP / Recipient Details',
         items: [
-          { name: 'Primary care GP / Recipient Address', pattern: /gp\b|general practitioner/ }
+          { name: 'Primary care GP / Recipient Name & Contact details or Address', pattern: /((?=.*(gp\b|general\s+practitioner|doctor|dr\b|recipient|physician|service\b|clinic))(?=.*(address|st\b|street|road|rd\b|ave\b|phone|tel\b|contact|\bph\b|fax|email|\d{4,15})))/i }
         ]
       },
       {
@@ -288,7 +286,7 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
         title: 'Presentation Details',
         items: [
           { name: 'Length of Stay (Total days)', pattern: /length of stay|los|total days/ },
-          { name: 'Discharge destination details', pattern: /discharge destination|discharged to/ }
+          { name: 'Discharge destination details', pattern: /discharge destination|discharged to|destination\b|discharge address|discharge place|discharge home/i }
         ]
       },
       {
@@ -296,27 +294,31 @@ function auditNotesFallback(name: string, dob: string, manualNotes: string, clea
         title: 'Presenting Problem & Diagnoses',
         items: [
           { name: 'Principal diagnosis responsible for admission', pattern: /principal diagnosis|reason for admission/ },
-          { name: 'Past medical history summary', pattern: /past medical history|comorbidities|pmhx/ }
+          { name: 'Past medical history summary', pattern: /past medical history|comorbidities|pmhx|background\b/i }
         ]
       },
       {
         id: 'procedures',
         title: 'Procedures',
         items: [
-          { name: 'Chronological invasive clinical interventions or Explicit "nil performed"', pattern: /procedure|operation|nil performed|intervention|invasive/ }
+          { name: 'Chronological invasive clinical interventions or Explicit "nil performed"', pattern: /procedur|operation|surgery|surgical|resection|fixation|repair|biopsy|excision|implant|nil\s*performed/i }
         ]
       },
       {
         id: 'allergies',
         title: 'Allergies & Adverse Reactions',
         items: [
-          { name: 'Specific drug allergy manifestation OR Explicit "nil known"', pattern: /allerg|adverse|nil known/ }
+          { name: 'Specific drug allergy manifestation OR Explicit "nil known"', pattern: /allerg|adverse|nil\s*known|no\s*known\s*allergies|nka|nil\s*allerg|no\s*known\s*drug\s*allergies|nkda/i }
         ]
       },
       {
         id: 'medicines_discharge',
         title: 'Medicines on Discharge',
-        items: []
+        items: [
+          { name: 'Discharge medicines status (new/changed/unchanged)', pattern: /\bnew\b|\bchanged\b|\bunchanged\b|\bceased\b/i },
+          { name: 'Discharge medicines directions (dose, route, frequency)', pattern: /\bmane\b|\bnocte\b|\bdaily\b|bd\b|tds\b|\bprn\b|\bmg\b|microg|tab|route/i },
+          { name: 'Discharge medicines clinical indication or reason for change', pattern: /indication|reason for change|change reason/i }
+        ]
       }
     ];
   }
@@ -404,10 +406,23 @@ ${missingGapsList.join('\n\n')}`;
 
 The document has been audited against standard requirements. The following elements were completely unmentioned or omitted:
 
-${missingGapsList.join('\n\n')}
+${missingGapsList.join('\n\n')}`;
 
-* **Invasive Interventions / Operations**: No chronological lists or explicit 'nil performed' statements were identified in the scanned draft.
-* **Adverse Events / Drug Reactions**: Explicit 'nil known' or allergic manifestations were not documented.`;
+    const hasProceduresValue = /procedure|operation|surgery|surgical|performed|resection|fixation|repair|biopsy|excision|implant/i.test(text);
+    const hasExplicitNilProcedures = /nil\s*procedur|nil\s*performed|nil\s*operation|no\s*procedures|no\s*operation/i.test(text);
+    if (!hasProceduresValue && !hasExplicitNilProcedures) {
+      if (!missingInfoAnalysis.includes('### Procedures\n- No omissions identified.')) {
+        missingInfoAnalysis += `\n* **Invasive Interventions / Operations**: Explicit 'nil performed' or chronological invasive clinical interventions were not documented.`;
+      }
+    }
+
+    const hasAllergiesValue = /allerg|adverse\s+reaction|reaction\b|rash|hives|urticaria|anaphylaxis|swelling/i.test(text);
+    const hasNoKnownAllergies = /nil\s*known|nil\s*allergic|no\s*known\s*allergies|nka|nil\s*allerg|no\s*known\s*drug\s*allergies|nkda/i.test(text);
+    if (!hasAllergiesValue && !hasNoKnownAllergies) {
+      if (!missingInfoAnalysis.includes('### Allergies & Adverse Reactions\n- No omissions identified.')) {
+        missingInfoAnalysis += `\n* **Adverse Events / Drug Reactions**: Explicit 'nil known' or allergic manifestations were not documented.`;
+      }
+    }
   }
 
   return { summary, missingInfoAnalysis, confidence: 95 };
@@ -538,6 +553,7 @@ The PDF or image document could not be processed using online cloud OCR. You can
 Your task is to analyze raw handwritten notes and/or medical records to identify patient demographic information.
 Extract the patient name, date of birth (DOB), gender, admission date, and target discharge date.
 
+If the document says "Patient: [Name]" or "Pt: [Name]", this equates to the Patient Name.
 If a field is not found, leave it as empty/blank, but make a best guess based on references (e.g. if age is mentioned, compute DOB or approximate; if gender is 'she/her', select 'Female').
 Always return YYYY-MM-DD date formats where possible. Ensure Gender is strictly "Female", "Male", or "Other".`;
 
@@ -621,13 +637,23 @@ CRITICAL FORMATTING GUIDELINES:
 - For the "summary" property, write a professional evaluation detailing the clinical course, diagnoses, medications, and recommendations represented in the provided draft. Organize this into clean, scannable dot points under clear markdown section headers. Do NOT use generic banners or decorative separators.
 - For the "missingInfoAnalysis" property, you must assemble a clear audit checklist of specifically what clinical parameters are completely omitted, unmentioned, or missing from the letter. Organize by category. Each entry MUST be listed extremely simply and directly, specifying ONLY the raw missing fields or topics (e.g., "MRN, Age, Sex, Gender, Address, and Telephone number"), with no verbose intro phrases, no conversational sentences, and no narrative fluff. Just list exactly what is missing.
 
+CRITICAL EVALUATION RULES (MANDATORY):
+1. **Patient Identifiers equivalence**: Treat 'Hospital No', 'MRN', 'UR', 'Hospital Number' and 'Synthetic MRN' as 100% equivalent patient identifiers. Do NOT mark MRN, UR, or patient ID as missing if any of these are present.
+2. **Discharge Destination**: Do NOT mark discharge destination as missing if the document specifies a destination like "Destination: Home with daughter", "Discharged home", or some equivalent phrasing.
+3. **Medical History Synonyms**: You MUST treat 'Background' as completely equivalent to 'Past Medical History' where it lists medical conditions. Do NOT mark Past Medical History as missing if a Background section exists listing medical history.
+4. **Allergies & NKDA**: Treat “No known drug allergies” (or "No known allergies", "NKDA", "NKA") as a fully valid, compliant allergy/adverse drug reaction status. Do NOT list allergy/adverse reactions as missing if this status is present. Do NOT claim allergic manifestations are missing unless a known specific allergy is listed without its reaction/manifestation.
+5. **Hospital & Contact Details Compliance**: Do NOT mark Hospital & Contact Details fully compliant (i.e. "No omissions identified") unless BOTH the hospital name AND at least one hospital address/phone/contact detail is present. If contact details are missing, list "Hospital & Contact Details - contact details missing".
+6. **GP/Recipient Details Compliance**: Do NOT mark GP/Recipient Details fully compliant (i.e. "No omissions identified") unless BOTH the recipient name/service and their contact details/address are present. If either is missing, list "GP/Recipient Details - contact details/address missing".
+7. **Medicines on Discharge Compliance**: Do NOT mark Medicines on Discharge fully compliant (i.e. "No omissions identified") merely because medicines are listed. You MUST verify that each medicine has its dose, route/frequency, status (new/changed/unchanged), and reason/change explanation where required. If any of these are missing, list "Medicines on Discharge" as missing/incomplete, stating which required parameter (dose/route, status, or change reason) is missing.
+8. **Avoid Contradictions**: Ensure total consistency: if a category has no omissions, write exactly "- No omissions identified." underneath its header, and do NOT list any missing items or warning statements for that category anywhere else in the document.
+
 NSW Health Guideline GL2022_005 Minimum Information Specifications (use to audit):
 Standard patients follow "requirements for minimum information" 2.1.1 of the RAG:
-1. Patient Details: .1. Name, 2. Medical Record Number (MRN), 3. Age, 4. Sex, 5. Gender, 6. Date of birth (age in years or months/days where applicable), 7. Address, 8. Telephone number.
-2. Hospital/Clinician Details: ospital name and Local Health District (districts)/Specialty Health Network (networks), Hospital address and contact details including phone numbers, Speciality name and nominated contact details including phone numbers, discharging clinician designation, supervisor/admitting supervisor, signature or electronic credentials.
+1. Patient Details: Name, Medical Record Number (MRN), Age, Sex, Gender, Date of birth (age in years or months/days where applicable), Address, Telephone number.
+2. Hospital/Clinician Details: Hospital name and Local Health District (districts)/Specialty Health Network (networks), discharging clinician designation, supervisor/admitting supervisor, signature or electronic credentials.
 3. Recipient(s): the intended audience(s) e.g. patient allocated primary care provider.
 4. Author & Discharging Clinician: Discharging clinician’s designation (role in organisation), Discharging clinician’s supervisor (admitting/attending medical officer), Contact details of admitting/attending medical officer or delegate (if not previously stated), Signature or electronic credentials.
-5. Presentation Details: 1. Admission date, 2. Discharge date, 3. Length of stay at hospital, 4. Clinical unit (the location from which the patient was discharged), 5. Clinical specialty type (the specialty responsible for discharge), 6. Discharge destination. This is to be included for all patients including those who discharge against medical advice and deceased patients.
+5. Presentation Details: Admission date, Discharge date, Length of stay at hospital, Clinical unit (the location from which the patient was discharged), Clinical specialty type (the specialty responsible for discharge), Discharge destination. This is to be included for all patients including those who discharge against medical advice and deceased patients.
 6. Presenting Problem & Diagnoses: Reason for presentation, principal diagnosis, additional diagnoses/complications, and past medical history summary.
 7. Procedures: Chronological invasive clinical interventions or 'nil performed'. Implanted/explanted medical device product name, type, model, batch number.
 8. Clinical Course & Summary: Concise summary of hospital stay, Intensive care unit / high dependency unit is applicable.
@@ -659,7 +685,7 @@ The patient is marked as WELL-BABY / OBSTETRIC. They do not follow 2.1.1.
       } else if (isDayOnly) {
         systemInstruction = `You are an expert clinical compliance auditor helping clinicians check written referral or discharge letters in accordance with NSW Health Guideline GL2022_005 Section 3.1.2 standards.
 The patient is DAY ONLY and does NOT follow 2.1.1 requirements. You must verify and check ONLY for the following information specified in GL2022_005 Section 3.1.2:
-1. Provided Patient identification. THE ONLY MISSING INFORMATION YOU SHOULD LOOK OUT FOR SHOULD BE: .1. Name, 2. Medical Record Number (MRN), 3. Age, 4. Sex, 5. Gender, 6. Date of birth (age in years or months/days where applicable), 7. Address, 8. Telephone number.
+1. Provided Patient identification. THE ONLY MISSING INFORMATION YOU SHOULD LOOK OUT FOR SHOULD BE: Name, Medical Record Number (MRN), Age, Sex, Gender, Date of birth (age in years or months/days where applicable), Address, Telephone number.
 2. Presenting Problem/Reason for procedure.
 3. Planned procedure. This includes "Invasive clinical interventions including operations and procedures must be documented in chronological order. If no procedures were performed, document ‘nil performed’." and "Procedures with medical devices Where a medical device has been implanted or explanted during the inpatient visit, the discharging clinician must include the product name, type, model and batch number for all devices."
 4. Summary of procedure. This includes Date of procedure, AMO and / or procedural list, Primary procedure performed and Outcomes / complications.

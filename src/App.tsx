@@ -44,7 +44,8 @@ import {
   MessageSquare,
   X,
   Bug,
-  ExternalLink
+  ExternalLink,
+  Printer
 } from 'lucide-react';
 import { Patient } from './types';
 import { DocumentCleaner } from './components/DocumentCleaner';
@@ -59,7 +60,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'patient_details',
     title: 'Patient Details',
     displayOrder: 1,
-    standard: '.1. Name\n2. Medical Record Number (MRN)\n3. Age\n4. Sex\n5. Gender\n6. Date of birth (age in years or months/days where applicable)\n7. Address\n8. Telephone number',
+    standard: 'Name\nMedical Record Number (MRN)\nAge\nSex\nGender\nDate of birth (age in years or months/days where applicable)\nAddress\nTelephone number',
     source: 'Section 2.1.2 - Patient details',
     keywords: ['patient', 'demographics', 'name', 'mrn', 'age', 'dob', 'address', 'telephone', 'gender', 'sex']
   },
@@ -67,7 +68,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'hospital_details',
     title: 'Hospital & Contact Details',
     displayOrder: 2,
-    standard: 'ospital name and Local Health District (districts)/Specialty Health Network (networks)\n Hospital address and contact details including phone numbers\n Speciality name and nominated contact details including phone numbers.',
+    standard: 'Hospital name and Local Health District (districts)/Specialty Health Network (networks)',
     source: 'Section 2.1.2 - Hospital details',
     keywords: ['hospital', 'district', 'contact', 'facility', 'specialty name', 'lhd', 'local health']
   },
@@ -91,7 +92,7 @@ const MINIMUM_REQUIREMENTS = [
     id: 'presentation_details',
     title: 'Presentation Details',
     displayOrder: 5,
-    standard: '1. Admission date\n2. Discharge date\n3. Length of stay at hospital\n4. Clinical unit (the location from which the patient was discharged)\n5. Clinical specialty type (the specialty responsible for discharge)\n6. Discharge destination. This is to be included for all patients including those who discharge against medical advice and deceased patients.',
+    standard: 'Admission date\nDischarge date\nLength of stay at hospital\nClinical unit (the location from which the patient was discharged)\nClinical specialty type (the specialty responsible for discharge)\nDischarge destination. This is to be included for all patients including those who discharge against medical advice and deceased patients.',
     source: 'Section 2.1.2 - Presentation details',
     keywords: ['presentation', 'admission date', 'discharge date', 'length of stay', 'clinical unit', 'destination', 'clinical specialty', 'los']
   },
@@ -273,7 +274,8 @@ const cleanGapText = (text: string): string => {
     clean = clean.charAt(0).toUpperCase() + clean.slice(1);
   }
   
-  return clean.trim();
+  const finalClean = clean.trim();
+  return finalClean === '' ? text : finalClean;
 };
 
 const getReferCitation = (reqId: string): string => {
@@ -985,12 +987,44 @@ export default function App() {
     }
   };
 
-  // Auto-detect patient details when raw content changes, but only if name is 'New Profile'
+  // Auto-detect patient details when raw content changes
   useEffect(() => {
-    if (selectedPatient && selectedPatient.name === 'New Profile') {
-      const hasContent = (selectedPatient.manualNotes && selectedPatient.manualNotes.trim().length > 15) || selectedPatient.cleanedMarkdown;
-      if (hasContent && !isDetectingDemographics) {
-        triggerDetectDemographics(selectedPatient);
+    if (selectedPatient) {
+      const textToParse = selectedPatient.manualNotes || selectedPatient.cleanedMarkdown || '';
+      if (textToParse.trim().length > 15) {
+        // Run offline regex parser immediately when user pastes data
+        const parsed = parseDemographicsOffline(textToParse);
+        if (parsed) {
+          let shouldUpdate = false;
+          const updatedPatient = { ...selectedPatient };
+          
+          if (parsed.name && (selectedPatient.name === 'New Profile' || selectedPatient.name === 'Anonymous Patient' || !selectedPatient.name || selectedPatient.name === parsed.name)) {
+            if (updatedPatient.name !== parsed.name) {
+              updatedPatient.name = parsed.name;
+              shouldUpdate = true;
+            }
+          }
+          if (parsed.dob && (selectedPatient.dob === '1960-01-01' || !selectedPatient.dob)) {
+            updatedPatient.dob = parsed.dob;
+            shouldUpdate = true;
+          }
+          if (parsed.gender && !selectedPatient.gender) {
+            updatedPatient.gender = parsed.gender;
+            shouldUpdate = true;
+          }
+          if (parsed.admissionDate && !selectedPatient.admissionDate) {
+            updatedPatient.admissionDate = parsed.admissionDate;
+            shouldUpdate = true;
+          }
+          if (parsed.dischargeDate && !selectedPatient.dischargeDate) {
+            updatedPatient.dischargeDate = parsed.dischargeDate;
+            shouldUpdate = true;
+          }
+
+          if (shouldUpdate) {
+            saveChange(patients.map((p) => (p.id === updatedPatient.id ? updatedPatient : p)));
+          }
+        }
       }
     }
   }, [selectedPatientId, selectedPatient?.cleanedMarkdown, selectedPatient?.manualNotes]);
@@ -1046,7 +1080,7 @@ export default function App() {
       } else if (cleanLine.startsWith('-') || cleanLine.startsWith('*')) {
         const textContent = cleanLine.replace(/^[-*]\s*/, '').trim();
         const textLower = textContent.toLowerCase();
-        if (textContent && !textLower.includes('no omission') && !textLower.includes('none missing') && !textLower.includes('not missing') && !textLower.includes('no missing')) {
+        if (textContent.length > 2 && textLower !== 'including:' && !textLower.includes('the document has been audited') && !textLower.includes('presenting problem/s and diagnoses must be documented') && !textLower.includes('no omission') && !textLower.includes('none missing') && !textLower.includes('not missing') && !textLower.includes('no missing')) {
           bubbles.push({
             category: currentCategory,
             content: textContent,
@@ -1054,7 +1088,7 @@ export default function App() {
         }
       } else if (cleanLine.length > 8 && !cleanLine.startsWith('<') && !cleanLine.startsWith('###')) {
         const lineLower = cleanLine.toLowerCase();
-        if (!lineLower.includes('no omission') && !lineLower.includes('none missing') && !lineLower.includes('not missing') && !lineLower.includes('no missing')) {
+        if (lineLower !== 'including:' && !lineLower.includes('the document has been audited') && !lineLower.includes('presenting problem/s and diagnoses must be documented') && !lineLower.includes('no omission') && !lineLower.includes('none missing') && !lineLower.includes('not missing') && !lineLower.includes('no missing')) {
           bubbles.push({
             category: currentCategory,
             content: cleanLine,
@@ -1153,8 +1187,8 @@ export default function App() {
     let targetPatient = patientToAudit || selectedPatient;
     if (!targetPatient) return;
 
-    // If patient is 'New Profile', offline extract demographics without using AI and update profile task bar
-    if (targetPatient.name === 'New Profile') {
+    // If patient is generic, offline extract demographics without using AI and update profile task bar
+    if (targetPatient.name === 'New Profile' || targetPatient.name === 'Anonymous Patient' || !targetPatient.name) {
       const textToParse = targetPatient.manualNotes || targetPatient.cleanedMarkdown || '';
       const parsed = parseDemographicsOffline(textToParse);
       if (parsed) {
@@ -1331,7 +1365,7 @@ export default function App() {
   return (
     <div id="app-root" className="min-h-screen bg-slate-50 text-slate-800 flex flex-col antialiased">
       {/* Top Professional Portal Headers */}
-      <header className="bg-white border-b border-slate-200/80 sticky top-0 z-40 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <header className="print:hidden bg-white border-b border-slate-200/80 sticky top-0 z-40 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-emerald-600/10 shrink-0">
             <Stethoscope className="w-5 h-5" />
@@ -1386,10 +1420,10 @@ export default function App() {
       </div>
 
       {/* Main Grid Workspace */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden print:overflow-visible">
         
         {/* Sidebar Patients Roster */}
-        <aside className="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 shrink-0 flex flex-col max-h-[400px] md:max-h-none overflow-hidden">
+        <aside className="print:hidden w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 shrink-0 flex flex-col max-h-[400px] md:max-h-none overflow-hidden">
           <div className="p-4 border-b border-slate-100 space-y-3">
             <button
               onClick={handleCreateBlankPatient}
@@ -1514,7 +1548,7 @@ export default function App() {
         </aside>
 
         {/* Selected Patient Roster Workspace */}
-        <main className="flex-1 overflow-y-auto bg-slate-50/55 p-4 lg:p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto print:overflow-visible bg-slate-50/55 p-4 lg:p-6 space-y-6">
           {!selectedPatient ? (
             <div className="h-full flex flex-col items-center justify-center p-8 bg-white border border-slate-200 rounded-xl max-w-lg mx-auto text-center space-y-4 shadow-sm mt-12">
               <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-400">
@@ -2286,6 +2320,68 @@ export default function App() {
 
                                 {/* Thumbs Up / Thumbs Down Rating widget */}
                                 <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2">
+                                     <button
+                                       onClick={() => {
+                                         const isIframed = window !== window.parent;
+                                         if (!isIframed) {
+                                           window.print();
+                                         } else {
+                                            // Generate format details
+                                            let breakdownText = "";
+                                            reqsGapsList.forEach((req) => {
+                                              if (req.gaps.length > 0) {
+                                                breakdownText += `[X] ${req.title} - INCOMPLETE (Missing Items):\n`;
+                                                req.gaps.forEach((g) => {
+                                                   breakdownText += `    - ${g.content}\n`;
+                                                });
+                                              } else {
+                                                breakdownText += `[✓] ${req.title} - FULLY COMPLIANT\n`;
+                                              }
+                                            });
+
+                                            // Generate text report
+                                            const report = `CLINICAL AUDIT REPORT
+Patient: ${selectedPatient.name}
+MRN/UR: ${selectedPatient.ur || 'Not specified'}
+Date of Audit: ${new Date().toLocaleDateString()}
+Overall Completeness: ${selectedPatient.auditConfidence}%
+
+=========================================
+COMPLIANCE BREAKDOWN (What is right vs wrong)
+=========================================
+${breakdownText}
+
+
+=========================================
+RAW MISSING INFORMATION (GL2022_005)
+=========================================
+${selectedPatient.missingInfoAnalysis || 'No missing information flagged.'}
+
+=========================================
+CLINICAL DRAFT
+=========================================
+${selectedPatient.manualNotes || selectedPatient.cleanedMarkdown || ''}
+`;
+                                            const blob = new Blob([report], { type: 'text/plain' });
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = `Audit_Report_${selectedPatient.name.replace(/\s+/g, '_')}.txt`;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            document.body.removeChild(a);
+                                            URL.revokeObjectURL(url);
+                                         }
+                                       }}
+                                       className="text-xs px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-md border border-slate-200 transition-colors flex items-center gap-1.5"
+                                       title="Download Text Report"
+                                     >
+                                       <Printer className="w-3.5 h-3.5" />
+                                       <span className="hidden sm:inline">Print Report</span>
+                                     </button>
+                                  </div>
+                                  <span className="text-[10px] text-slate-450 text-slate-300 mx-1">|</span>
                                   <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider hidden sm:inline">Rate Audit Accuracy:</span>
                                   <div className="flex items-center gap-1 bg-slate-50 border border-slate-200/60 p-0.5 rounded-lg shadow-3xs">
                                     <button
@@ -2922,7 +3018,7 @@ export default function App() {
       {/* Patient demographics configuration modal removed in favor of quick inline extraction */}
 
       {/* Humble aesthetic page bottom credits */}
-      <footer className="bg-white border-t border-slate-200 px-6 py-4 flex flex-col items-start gap-1">
+      <footer className="print:hidden bg-white border-t border-slate-200 px-6 py-4 flex flex-col items-start gap-1">
         <span 
           onClick={() => {
             if (isDevMode) {
@@ -2947,7 +3043,7 @@ export default function App() {
       </footer>
 
       {/* Floating Side Feedback Bubble & Dialog widget */}
-      <div id="clinician-feedback-bubble" className="fixed bottom-6 right-6 z-50 font-sans">
+      <div id="clinician-feedback-bubble" className="print:hidden fixed bottom-6 right-6 z-50 font-sans">
         {!isSuggestionOpen ? (
           <button
             type="button"
